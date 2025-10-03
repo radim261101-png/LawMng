@@ -188,3 +188,36 @@ Preferred communication style: Simple, everyday language.
 - No external notification services (toast notifications only)
 - No analytics or monitoring services in current implementation
 - Prepared for PostgreSQL migration but currently using in-memory storage
+
+## Replit Environment Setup (October 3, 2025)
+
+**Project Import & Configuration:**
+- Successfully imported from GitHub as a fresh clone
+- Configured for Replit environment with all necessary setup
+- Frontend workflow configured to run on port 5000 with webview output
+- Development server properly configured to bind to `0.0.0.0:5000`
+- Vite configuration includes `allowedHosts: true` for Replit proxy compatibility
+- All npm dependencies installed and verified
+
+**Deployment Configuration:**
+- Deployment target: `autoscale` (stateless frontend application)
+- Build command: `npm run build`
+- Start command: `npm run start`
+- Production-ready setup for Replit deployments
+
+**Development Workflow:**
+- Workflow name: "Start application"
+- Command: `npm run dev`
+- Port: 5000 (webview mode)
+- Hot module replacement (HMR) enabled via Vite
+- Application serves both frontend and backend on same port
+
+**Google Sheets Integration:**
+- Uses Replit's Google Sheets connector (google-sheet==1.0.0)
+- Authenticated via REPL_IDENTITY/WEB_REPL_RENEWAL tokens
+- Spreadsheet ID configured in server/googleSheets.ts
+- Automatic OAuth token management with expiry handling
+
+**Testing Credentials:**
+- Admin: `admin / admin123`
+- User: `user / user123`
