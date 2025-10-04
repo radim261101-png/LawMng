@@ -24,6 +24,10 @@ export async function fetchSheetData(sheetName: string = MAIN_SHEET_NAME): Promi
     );
 
     if (!response.ok) {
+      if (response.status === 400 && sheetName === UPDATES_SHEET_NAME) {
+        console.warn(`Sheet "${sheetName}" not found. Please create it in Google Sheets with headers: serial, updatedBy, updatedAt, fieldName, oldValue, newValue`);
+        return [];
+      }
       throw new Error(`Failed to fetch sheet data: ${response.statusText}`);
     }
 
@@ -139,30 +143,35 @@ export async function logUpdateToSheet(updateData: {
 }
 
 export async function getUpdatesLog(): Promise<any[]> {
-  const data = await fetchSheetData(UPDATES_SHEET_NAME);
-  if (data.length === 0) return [];
-  
-  const headers = data[0];
-  const updates = [];
+  try {
+    const data = await fetchSheetData(UPDATES_SHEET_NAME);
+    if (data.length === 0) return [];
+    
+    const headers = data[0];
+    const updates = [];
 
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (!row || row.length === 0) continue;
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row || row.length === 0) continue;
 
-    const update: any = {
-      id: `update-${i}`,
-    };
+      const update: any = {
+        id: `update-${i}`,
+      };
 
-    headers.forEach((header: string, index: number) => {
-      if (header) {
-        update[header] = row[index] || null;
-      }
-    });
+      headers.forEach((header: string, index: number) => {
+        if (header) {
+          update[header] = row[index] || null;
+        }
+      });
 
-    updates.push(update);
+      updates.push(update);
+    }
+
+    return updates.reverse();
+  } catch (error) {
+    console.warn('UpdatesLog sheet not found or error fetching data:', error);
+    return [];
   }
-
-  return updates.reverse();
 }
 
 function getDemoData(): any[][] {
