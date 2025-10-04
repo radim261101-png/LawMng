@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { Clock, User, FileEdit, AlertCircle } from 'lucide-react';
+import { Clock, User, FileEdit } from 'lucide-react';
 import { getUpdatesLog } from '@/lib/googleSheets';
 
 interface RecordUpdate {
@@ -78,20 +78,6 @@ export default function UpdatesHistoryPage() {
             جميع التعديلات التي تم إجراؤها على السجلات من قبل المستخدمين
           </p>
         </div>
-
-        <Alert className="mb-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-          <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <AlertTitle className="text-blue-900 dark:text-blue-100 text-right">ملاحظة هامة</AlertTitle>
-          <AlertDescription className="text-blue-800 dark:text-blue-200 text-right">
-            لعرض سجل التعديلات، يجب عليك:
-            <ol className="list-decimal list-inside mt-2 space-y-1">
-              <li>إنشاء شيت جديد في Google Spreadsheet واسمه <strong>UpdatesLog</strong></li>
-              <li>في الصف الأول، أضف العناوين التالية: serial | updatedBy | updatedAt | fieldName | oldValue | newValue</li>
-              <li>تحديث Google Apps Script بالكود الموجود في ملف GOOGLE_APPS_SCRIPT_UPDATE.md</li>
-            </ol>
-            بعد ذلك، سيتم حفظ جميع التعديلات تلقائياً في هذا الشيت.
-          </AlertDescription>
-        </Alert>
 
         {isLoading ? (
           <div className="space-y-4">
