@@ -39,3 +39,6 @@ migrations/
 # Misc
 .cache/
 coverage/
+
+# Credentials
+credentials.json

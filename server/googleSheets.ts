@@ -1,19 +1,18 @@
+
 import { google } from 'googleapis';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const SPREADSHEET_ID = '1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4';
 
-// Service Account credentials from environment variable
+// قراءة Service Account credentials من ملف JSON مباشرة
 function getServiceAccountCredentials() {
-  const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-
-  if (!credentialsJson) {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY environment variable not set');
-  }
-
   try {
+    const credentialsPath = join(process.cwd(), 'credentials.json');
+    const credentialsJson = readFileSync(credentialsPath, 'utf-8');
     return JSON.parse(credentialsJson);
   } catch (error) {
-    throw new Error('Invalid GOOGLE_SERVICE_ACCOUNT_KEY JSON format');
+    throw new Error('لا يمكن قراءة ملف credentials.json. تأكد من وجود الملف في مجلد المشروع');
   }
 }
 
