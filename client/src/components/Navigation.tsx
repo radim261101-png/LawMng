@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { LogOut, Scale, User, FileText, BarChart3, History } from 'lucide-react';
+import { LogOut, Scale, User, FileText, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Navigation() {
@@ -16,7 +16,6 @@ export default function Navigation() {
   const navItems = [
     { path: '/dashboard', label: 'السجلات', icon: FileText },
     { path: '/analytics', label: 'التحليلات', icon: BarChart3 },
-    ...(user?.role === 'admin' ? [{ path: '/updates', label: 'سجل التعديلات', icon: History }] : []),
   ];
 
   return (

@@ -7,7 +7,6 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Login from "@/components/Login";
 import RecordsPage from "@/pages/RecordsPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
-import UpdatesHistoryPage from "@/pages/UpdatesHistoryPage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 function Router() {
@@ -32,11 +31,6 @@ function Router() {
       <Route path="/analytics">
         <ProtectedRoute>
           <AnalyticsPage />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/updates">
-        <ProtectedRoute requireAdmin>
-          <UpdatesHistoryPage />
         </ProtectedRoute>
       </Route>
       <Route>

@@ -16,6 +16,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Users hardcoded in frontend
+const USERS = [
+  {
+    id: '1',
+    username: 'admin',
+    password: 'admin123',
+    role: 'admin' as const,
+  },
+  {
+    id: '2',
+    username: 'user',
+    password: 'user123',
+    role: 'user' as const,
+  },
+];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,47 +40,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = () => {
     try {
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      localStorage.removeItem('user');
     } finally {
       setIsLoading(false);
     }
   };
 
   const login = async (username: string, password: string) => {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-      credentials: 'include',
-    });
+    // Find user in hardcoded list
+    const foundUser = USERS.find(
+      u => u.username === username && u.password === password
+    );
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Login failed');
+    if (!foundUser) {
+      throw new Error('بيانات الدخول غير صحيحة');
     }
 
-    const userData = await response.json();
+    const userData: User = {
+      id: foundUser.id,
+      username: foundUser.username,
+      role: foundUser.role,
+    };
+
+    localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };
 
   const logout = async () => {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
+    localStorage.removeItem('user');
     setUser(null);
   };
 

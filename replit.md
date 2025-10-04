@@ -6,6 +6,18 @@ A bilingual (Arabic/English) legal case management system built with React, Expr
 
 ## Recent Changes
 
+### October 4, 2025 - Frontend-Only Conversion
+**Major Architecture Change:**
+- Converted application to **frontend-only** (no backend)
+- Direct Google Sheets API integration from frontend
+- Authentication moved to localStorage (no sessions)
+- Dynamic headers loaded from Google Sheet (first row)
+- Removed all backend code (Express, server routes, etc.)
+- Configured for easy Vercel deployment
+- Added `.env.example` with Google Sheets API key template
+- Updated workflows to run Vite dev server only
+- Ready for deployment on static hosting platforms
+
 ### October 4, 2025 - Replit Environment Setup
 **GitHub Import & Configuration:**
 - Successfully imported fresh clone from GitHub repository
@@ -73,26 +85,16 @@ Preferred communication style: Simple, everyday language.
 - Reusable UI components following shadcn/ui patterns
 - Conditional rendering of edit forms based on user role (append-only vs full edit)
 
-### Backend Architecture
+### Backend Architecture (REMOVED - Frontend Only)
 
-**Runtime**: Node.js with Express
-- **Language**: TypeScript with ESM modules
-- **Build Tool**: esbuild for production bundling
-- **Development**: tsx for development hot-reloading
-- **API Pattern**: RESTful endpoints under `/api` prefix
+**Previous Architecture**: The application previously used Node.js/Express backend but has been converted to frontend-only.
 
-**Server Setup**:
-- Middleware-based request handling
-- Request/response logging with duration tracking
-- Error handling middleware for centralized error responses
-- Session management using express-session (in-memory for development)
-
-**Key Architectural Decisions**:
-- Monolithic backend with modular route registration
-- Separation of storage layer from route handlers
-- Interface-based storage abstraction (IStorage) allowing multiple implementations
-- Currently using Google Sheets as primary data source (SheetStorage) with local caching
-- Permission enforcement at API level with field-level access control
+**Current Architecture**:
+- Direct Google Sheets API calls from frontend
+- No server-side code - all logic in browser
+- localStorage-based authentication
+- Google Sheets API key for data access
+- Vercel/Netlify compatible static site
 
 ### Data Storage
 

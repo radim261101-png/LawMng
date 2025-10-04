@@ -1,44 +1,52 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useSheetRecords } from "@/hooks/useSheetRecords";
 import Navigation from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ValuRecord } from "@shared/schema";
 import { BarChart3, FileText, Scale, TrendingUp } from "lucide-react";
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
 
 export default function AnalyticsPage() {
-  const { data: records, isLoading } = useQuery<ValuRecord[]>({
-    queryKey: ["/api/records"],
-  });
+  const { records, isLoading } = useSheetRecords();
 
-  const stats = {
-    total: records?.length || 0,
-    byGovernorate: {} as Record<string, number>,
-    byStatus: {} as Record<string, number>,
-    byLawyer: {} as Record<string, number>,
-    totalValue: 0,
-  };
+  const stats = useMemo(() => {
+    const result = {
+      total: records?.length || 0,
+      byGovernorate: {} as Record<string, number>,
+      byStatus: {} as Record<string, number>,
+      byLawyer: {} as Record<string, number>,
+      totalValue: 0,
+    };
 
-  if (records) {
-    records.forEach((record) => {
-      if (record.governorate) {
-        stats.byGovernorate[record.governorate] = (stats.byGovernorate[record.governorate] || 0) + 1;
-      }
-      if (record.archived) {
-        stats.byStatus[record.archived] = (stats.byStatus[record.archived] || 0) + 1;
-      }
-      if (record.lastUpdateLawyer) {
-        stats.byLawyer[record.lastUpdateLawyer] = (stats.byLawyer[record.lastUpdateLawyer] || 0) + 1;
-      }
-      if (record.documentValue) {
-        const value = parseFloat(record.documentValue.replace(/,/g, ""));
-        if (!isNaN(value)) {
-          stats.totalValue += value;
+    if (records) {
+      records.forEach((record) => {
+        // Check multiple possible field names for governorate
+        const governorate = record['المحافظة'] || record['governorate'];
+        if (governorate) {
+          result.byGovernorate[governorate] = (result.byGovernorate[governorate] || 0) + 1;
         }
-      }
-    });
-  }
+
+        const archived = record['أرشيف الدعاوي'] || record['archived'] || record['أرشيف'];
+        if (archived) {
+          result.byStatus[archived] = (result.byStatus[archived] || 0) + 1;
+        }
+
+        const lawyer = record['المحامي القائم بآخر تحديث'] || record['lastUpdateLawyer'];
+        if (lawyer) {
+          result.byLawyer[lawyer] = (result.byLawyer[lawyer] || 0) + 1;
+        }
+
+        const docValue = record['قيمة السند'] || record['documentValue'];
+        if (docValue) {
+          const value = parseFloat(docValue.toString().replace(/,/g, ""));
+          if (!isNaN(value)) {
+            result.totalValue += value;
+          }
+        }
+      });
+    }
+
+    return result;
+  }, [records]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -46,7 +54,7 @@ export default function AnalyticsPage() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-6">
           <h2 className="text-3xl font-bold text-foreground">تحليل البيانات</h2>
-          <p className="text-muted-foreground mt-1">إحصائيات ورؤى حول السجلات القانونية</p>
+          <p className="text-muted-foreground mt-1">إحصائيات ورؤى حول السجلات القانونية من Google Sheets</p>
         </div>
 
         {isLoading ? (
