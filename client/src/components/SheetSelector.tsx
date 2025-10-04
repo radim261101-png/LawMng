@@ -71,7 +71,7 @@ export default function SheetSelector() {
 
     addSheet({
       ...newSheet,
-      updatesSheetName: newSheet.updatesSheetName || undefined,
+      updatesSheetName: newSheet.updatesSheetName && newSheet.updatesSheetName !== '__none__' ? newSheet.updatesSheetName : undefined,
     });
 
     setNewSheet({
@@ -278,13 +278,14 @@ export default function SheetSelector() {
                 {hasLoadedSheets && availableSheets.length > 0 ? (
                   <div className="space-y-2">
                     <Select 
-                      value={newSheet.updatesSheetName || undefined} 
+                      value={newSheet.updatesSheetName || ''} 
                       onValueChange={(value) => setNewSheet({ ...newSheet, updatesSheetName: value })}
                     >
                       <SelectTrigger id="updatesSheetName" data-testid="select-updates-sheet">
                         <SelectValue placeholder="اختر شيت سجل التعديلات (أو اتركه فارغاً)..." />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__">لا يوجد</SelectItem>
                         {availableSheets.map((sheet) => (
                           <SelectItem key={`updates-${sheet.sheetId}`} value={sheet.title}>
                             {sheet.title}
@@ -292,7 +293,7 @@ export default function SheetSelector() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {newSheet.updatesSheetName && (
+                    {newSheet.updatesSheetName && newSheet.updatesSheetName !== '__none__' && (
                       <Button
                         type="button"
                         variant="ghost"
