@@ -5,14 +5,24 @@ import { join } from 'path';
 
 const SPREADSHEET_ID = '1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4';
 
-// قراءة Service Account credentials من ملف JSON مباشرة
+// قراءة Service Account credentials من ملف JSON أو متغيرات البيئة
 function getServiceAccountCredentials() {
+  // أولاً: حاول قراءة متغيرات البيئة
+  if (process.env.GOOGLE_CREDENTIALS) {
+    try {
+      return JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    } catch (error) {
+      console.error('خطأ في تحليل GOOGLE_CREDENTIALS من متغيرات البيئة');
+    }
+  }
+
+  // ثانياً: حاول قراءة ملف credentials.json
   try {
     const credentialsPath = join(process.cwd(), 'credentials.json');
     const credentialsJson = readFileSync(credentialsPath, 'utf-8');
     return JSON.parse(credentialsJson);
   } catch (error) {
-    throw new Error('لا يمكن قراءة ملف credentials.json. تأكد من وجود الملف في مجلد المشروع');
+    throw new Error('لا يمكن العثور على بيانات الاعتماد. أضف ملف credentials.json أو متغير البيئة GOOGLE_CREDENTIALS');
   }
 }
 
