@@ -4,13 +4,24 @@
 
 A bilingual (Arabic/English) legal case management system built with React, Express, and PostgreSQL. The application provides role-based access control for managing legal records, cases, and documentation with a focus on Arabic legal context and RTL (right-to-left) interface design.
 
-## Recent Changes (October 2, 2025)
+## Recent Changes
 
+### October 4, 2025 - Replit Environment Setup
+**GitHub Import & Configuration:**
+- Successfully imported fresh clone from GitHub repository
+- Fixed tsx execution by configuring workflow to use `npx tsx server/index.ts`
+- Verified Google Sheets integration with Replit authentication tokens
+- Configured development workflow on port 5000 with webview output
+- Deployment configuration set for autoscale with build and start commands
+- Application tested and verified working correctly with Arabic RTL interface
+- All dependencies installed and properly configured
+
+### October 2, 2025 - Google Sheets Integration
 **Google Sheets Integration:**
 - Integrated with Google Sheets as the primary data source
 - All records are now fetched directly from Google Sheets spreadsheet
-- Real-time data synchronization with 5-second cache for performance
-- Spreadsheet ID: 1f0kcjIgFGQq3wLAF7yp_APJw3v-ZvcGfRs2QhjVexgA
+- Real-time data synchronization with 120-second cache for performance
+- Spreadsheet ID: 1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4
 - Automatic column mapping between sheet structure and application schema
 - Used Replit's Google Sheets connector for secure authentication
 
