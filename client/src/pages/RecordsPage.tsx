@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Pencil, Search } from "lucide-react";
+import { Pencil, Search, Download } from "lucide-react";
 import { RecordsPagination } from "@/components/RecordsPagination";
+import { exportToExcel } from "@/lib/excelExport";
+import { useToast } from "@/hooks/use-toast";
 import type { SheetRecord } from "@/hooks/useSheetRecords";
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -32,6 +34,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function RecordsPage() {
   const { user } = useAuth();
   const { records, headers, isLoading, updateRecord } = useSheetRecords();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [editingRecord, setEditingRecord] = useState<SheetRecord | null>(null);
@@ -137,6 +140,26 @@ export default function RecordsPage() {
     setCurrentPage(1);
   }, []);
 
+  const handleExport = useCallback(() => {
+    try {
+      exportToExcel({
+        headers,
+        records: filteredRecords,
+        fileName: searchTerm ? 'filtered_records' : 'all_records'
+      });
+      toast({
+        title: 'تم التصدير بنجاح',
+        description: 'تم تحميل ملف Excel بنجاح',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'خطأ في التصدير',
+        description: error.message || 'حدث خطأ أثناء تصدير البيانات',
+        variant: 'destructive',
+      });
+    }
+  }, [headers, filteredRecords, searchTerm, toast]);
+
   const renderField = useCallback((fieldName: string) => {
     const isAdmin = user?.role === "admin";
     const value = formData[fieldName] || "";
@@ -200,11 +223,22 @@ export default function RecordsPage() {
               data-testid="input-search"
             />
           </div>
-          {searchTerm && (
-            <span className="text-sm text-muted-foreground whitespace-nowrap">
-              {filteredRecords.length} نتيجة
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {searchTerm && (
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                {filteredRecords.length} نتيجة
+              </span>
+            )}
+            <Button
+              onClick={handleExport}
+              disabled={!filteredRecords.length || isLoading}
+              variant="outline"
+              data-testid="button-export-excel"
+            >
+              <Download className="w-4 h-4 ml-2" />
+              تصدير لـ Excel
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (

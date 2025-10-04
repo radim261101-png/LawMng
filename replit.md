@@ -1,7 +1,7 @@
 # Legal Case Management System
 
 ## Overview
-This project is a bilingual (Arabic/English) legal case management system built with React, designed to manage legal records, cases, and documentation. Its primary purpose is to provide role-based access control and an RTL (right-to-left) interface for Arabic legal contexts, with all data stored in and synced with Google Sheets. The system supports multi-sheet management, dynamic data fetching, and advanced analytics, aiming for an enterprise utility aesthetic with a focus on data clarity.
+This project is a bilingual (Arabic/English) legal case management system built with React, designed to manage legal records, cases, and documentation. Its primary purpose is to provide role-based access control and an RTL (right-to-left) interface for Arabic legal contexts, with all data stored in and synced with Google Sheets. The system supports multi-sheet management, dynamic data fetching, advanced analytics, pagination for performance optimization, and Excel export functionality, aiming for an enterprise utility aesthetic with a focus on data clarity and speed.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -46,6 +46,15 @@ Authentication is handled via localStorage with predefined credentials (admin/ad
 
 ### Date Handling
 - `date-fns`: Date manipulation and formatting
+
+### Data Export
+- `xlsx` (SheetJS): Excel file generation and export functionality
+
+### Performance Optimizations
+- **Pagination**: Records and updates are paginated (10/25/50/100 items per page) for improved performance with large datasets
+- **Debounced Search**: 300ms debounce on search inputs to reduce unnecessary re-renders and filtering operations
+- **Memoization**: useMemo and useCallback hooks for optimized rendering and function references
+- **Smart Filtering**: Filtered data is computed only when search term or records change
 
 ### Key Integrations
 - Google Sheets API v4: Primary data source for reading and writing.
