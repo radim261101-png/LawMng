@@ -47,6 +47,14 @@ export function useSheetRecords() {
 
       const rowData = new Array(headers.length).fill('');
       
+      // First, fill in all existing data from the record
+      headers.forEach((header, index) => {
+        if (header && record[header] !== undefined && record[header] !== null) {
+          rowData[index] = record[header];
+        }
+      });
+
+      // Then, apply updates (overwrite with new values)
       Object.keys(updates).forEach((key) => {
         const index = headerIndices[key];
         if (index !== undefined) {
@@ -54,16 +62,8 @@ export function useSheetRecords() {
         }
       });
 
-      for (const header of headers) {
-        if (header && !(header in updates)) {
-          const index = headerIndices[header];
-          if (index !== undefined && record[header] !== undefined) {
-            rowData[index] = record[header] || '';
-          }
-        }
-      }
-
-      if (rowData[0] === '') {
+      // Ensure serial number is always present
+      if (rowData[0] === '' || rowData[0] === null) {
         rowData[0] = record.serial.toString();
       }
 

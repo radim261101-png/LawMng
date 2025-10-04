@@ -34,13 +34,17 @@ export default function RecordsPage() {
 
   const handleEdit = (record: SheetRecord) => {
     setEditingRecord(record);
-    // Initialize form data with all record data
+    // Initialize form data differently based on role
     const initialData: Record<string, any> = {};
-    headers.forEach(header => {
-      if (header && record[header] !== undefined) {
-        initialData[header] = record[header];
-      }
-    });
+    if (user?.role === "admin") {
+      // Admin: initialize with all existing data for editing
+      headers.forEach(header => {
+        if (header && record[header] !== undefined) {
+          initialData[header] = record[header];
+        }
+      });
+    }
+    // Regular users: start with empty form (they will add new data only)
     setFormData(initialData);
   };
 
