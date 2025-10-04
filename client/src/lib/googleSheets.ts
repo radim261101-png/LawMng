@@ -1,4 +1,6 @@
 const SPREADSHEET_ID = '1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4';
+const MAIN_SHEET_NAME = 'Sheet1';
+const UPDATES_SHEET_NAME = 'UpdatesLog';
 
 const getGoogleSheetsApiKey = () => {
   return import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || '';
@@ -8,17 +10,17 @@ export interface SheetRecord {
   [key: string]: any;
 }
 
-export async function fetchSheetData(): Promise<any[][]> {
+export async function fetchSheetData(sheetName: string = MAIN_SHEET_NAME): Promise<any[][]> {
   const apiKey = getGoogleSheetsApiKey();
   
   if (!apiKey) {
     console.warn('No Google Sheets API key found. Using demo data.');
-    return getDemoData();
+    return sheetName === MAIN_SHEET_NAME ? getDemoData() : [];
   }
 
   try {
     const response = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Sheet1!A:CZ?key=${apiKey}`
+      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!A:CZ?key=${apiKey}`
     );
 
     if (!response.ok) {
@@ -29,7 +31,7 @@ export async function fetchSheetData(): Promise<any[][]> {
     return data.values || [];
   } catch (error) {
     console.error('Error fetching sheet data:', error);
-    return getDemoData();
+    return sheetName === MAIN_SHEET_NAME ? getDemoData() : [];
   }
 }
 
@@ -72,7 +74,6 @@ export async function getSheetRecords(): Promise<any[]> {
 }
 
 export async function updateSheetRow(rowIndex: number, values: any[]): Promise<void> {
-  // استخدم Google Apps Script للتحديثات
   const scriptUrl = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
   
   if (!scriptUrl) {
@@ -83,22 +84,85 @@ export async function updateSheetRow(rowIndex: number, values: any[]): Promise<v
   try {
     const response = await fetch(scriptUrl, {
       method: 'POST',
-      mode: 'no-cors', // مهم لـ Google Apps Script
+      mode: 'no-cors',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        action: 'updateRow',
+        sheetName: MAIN_SHEET_NAME,
         rowIndex: rowIndex,
         values: values,
       }),
     });
 
-    // no-cors mode لا يسمح بقراءة الـ response، لكن التحديث يحصل
     console.log('تم إرسال طلب التحديث');
   } catch (error) {
     console.error('Error updating sheet:', error);
     throw error;
   }
+}
+
+export async function logUpdateToSheet(updateData: {
+  serial: number;
+  updatedBy: string;
+  updatedAt: string;
+  fieldName: string;
+  oldValue: string;
+  newValue: string;
+}): Promise<void> {
+  const scriptUrl = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
+  
+  if (!scriptUrl) {
+    console.warn('Google Apps Script URL not configured - update not logged');
+    return;
+  }
+
+  try {
+    await fetch(scriptUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'logUpdate',
+        sheetName: UPDATES_SHEET_NAME,
+        updateData: updateData,
+      }),
+    });
+
+    console.log('تم تسجيل التعديل في شيت UpdatesLog');
+  } catch (error) {
+    console.error('Error logging update:', error);
+  }
+}
+
+export async function getUpdatesLog(): Promise<any[]> {
+  const data = await fetchSheetData(UPDATES_SHEET_NAME);
+  if (data.length === 0) return [];
+  
+  const headers = data[0];
+  const updates = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.length === 0) continue;
+
+    const update: any = {
+      id: `update-${i}`,
+    };
+
+    headers.forEach((header: string, index: number) => {
+      if (header) {
+        update[header] = row[index] || null;
+      }
+    });
+
+    updates.push(update);
+  }
+
+  return updates.reverse();
 }
 
 function getDemoData(): any[][] {

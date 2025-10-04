@@ -2,9 +2,29 @@
 
 ## Overview
 
-A bilingual (Arabic/English) legal case management system built with React, Express, and PostgreSQL. The application provides role-based access control for managing legal records, cases, and documentation with a focus on Arabic legal context and RTL (right-to-left) interface design.
+A bilingual (Arabic/English) legal case management system built with React and Google Sheets. The application provides role-based access control for managing legal records, cases, and documentation with a focus on Arabic legal context and RTL (right-to-left) interface design. All data is stored in and synced with Google Sheets.
 
 ## Recent Changes
+
+### October 4, 2025 - Updates History & Analytics Enhancement
+**Major Features Added:**
+- ✅ **Updates History Page**: Admin-only page to view all record modifications
+- ✅ **Automatic Update Logging**: All changes are automatically saved to `UpdatesLog` sheet in Google Sheets
+- ✅ **Analytics Page**: Fixed and enhanced analytics showing:
+  - Total records count
+  - Distribution by governorate
+  - Distribution by lawyer
+  - Total document value
+- ✅ **Navigation Updates**: Added "سجل التعديلات" tab (admin-only)
+- ✅ **Data Duplication Fix**: Resolved issue where existing data was being duplicated when adding new information
+- ✅ **User Experience**: Regular users now start with empty form fields (append-only mode)
+
+**Technical Implementation:**
+- Created `UpdatesLog` sheet functionality in Google Sheets
+- Modified `googleSheets.ts` to support multiple sheets (Sheet1 + UpdatesLog)
+- Updated Google Apps Script to handle two actions: `updateRow` and `logUpdate`
+- Enhanced `useSheetRecords` hook to log all changes with old/new values
+- Added proper change tracking with username, timestamp, field name, and values
 
 ### October 4, 2025 - Complete Replit Environment Setup
 **GitHub Import & Full Configuration:**

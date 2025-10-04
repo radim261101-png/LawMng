@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { LogOut, Scale, User, FileText, BarChart3 } from 'lucide-react';
+import { LogOut, Scale, User, FileText, BarChart3, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Navigation() {
@@ -16,6 +16,7 @@ export default function Navigation() {
   const navItems = [
     { path: '/dashboard', label: 'السجلات', icon: FileText },
     { path: '/analytics', label: 'التحليلات', icon: BarChart3 },
+    { path: '/updates-history', label: 'سجل التعديلات', icon: History, adminOnly: true },
   ];
 
   return (
@@ -50,26 +51,28 @@ export default function Navigation() {
         </div>
         
         <div className="flex gap-2 mt-4 border-t pt-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location === item.path;
-            return (
-              <Link key={item.path} href={item.path}>
-                <div
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer",
-                    isActive 
-                      ? "bg-primary text-primary-foreground" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                  data-testid={`link-${item.path.slice(1)}`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
-                </div>
-              </Link>
-            );
-          })}
+          {navItems
+            .filter((item) => !item.adminOnly || user?.role === 'admin')
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.path;
+              return (
+                <Link key={item.path} href={item.path}>
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer",
+                      isActive 
+                        ? "bg-primary text-primary-foreground" 
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                    data-testid={`link-${item.path.slice(1)}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </div>
+                </Link>
+              );
+            })}
         </div>
       </div>
     </nav>

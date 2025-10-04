@@ -1,18 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import Navigation from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Clock, User, FileEdit } from 'lucide-react';
+import { getUpdatesLog } from '@/lib/googleSheets';
 
 interface RecordUpdate {
   id: string;
-  recordId: string;
-  updatedBy: string;
-  updatedAt: string;
-  fieldName: string;
-  oldValue: string | null;
-  newValue: string | null;
+  serial?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+  fieldName?: string;
+  oldValue?: string;
+  newValue?: string;
 }
 
 const fieldLabels: Record<string, string> = {
@@ -59,7 +61,8 @@ const fieldLabels: Record<string, string> = {
 
 export default function UpdatesHistoryPage() {
   const { data: updates, isLoading } = useQuery<RecordUpdate[]>({
-    queryKey: ['/api/updates/all'],
+    queryKey: ['updates-log'],
+    queryFn: getUpdatesLog,
   });
 
   return (
@@ -76,11 +79,10 @@ export default function UpdatesHistoryPage() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-muted-foreground">جاري التحميل...</p>
-            </div>
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-48 w-full" />
+            ))}
           </div>
         ) : !updates || updates.length === 0 ? (
           <Card>
@@ -97,21 +99,27 @@ export default function UpdatesHistoryPage() {
               <Card key={update.id} data-testid={`card-update-${update.id}`}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg text-right">
-                    {fieldLabels[update.fieldName] || update.fieldName}
+                    {update.fieldName ? (fieldLabels[update.fieldName] || update.fieldName) : 'تعديل'}
                     <FileEdit className="h-5 w-5 text-primary mr-auto" />
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground text-right">
+                    <span data-testid={`text-serial-${update.id}`}>
+                      رقم السجل: <strong>{update.serial || 'غير محدد'}</strong>
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground text-right">
                     <span data-testid={`text-updatedby-${update.id}`}>
-                      تم التعديل بواسطة: <strong>{update.updatedBy}</strong>
+                      تم التعديل بواسطة: <strong>{update.updatedBy || 'غير معروف'}</strong>
                     </span>
                     <User className="h-4 w-4 mr-auto" />
                   </div>
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground text-right">
                     <span data-testid={`text-updatedat-${update.id}`}>
-                      {format(new Date(update.updatedAt), 'PPpp', { locale: ar })}
+                      {update.updatedAt ? format(new Date(update.updatedAt), 'PPpp', { locale: ar }) : 'غير محدد'}
                     </span>
                     <Clock className="h-4 w-4 mr-auto" />
                   </div>

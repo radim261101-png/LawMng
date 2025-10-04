@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getSheetRecords, getSheetHeaders, updateSheetRow } from '@/lib/googleSheets';
+import { getSheetRecords, getSheetHeaders, updateSheetRow, logUpdateToSheet } from '@/lib/googleSheets';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface SheetRecord {
   id: string;
@@ -15,6 +16,7 @@ export function useSheetRecords() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchRecords = async () => {
     try {
@@ -54,6 +56,27 @@ export function useSheetRecords() {
         }
       });
 
+      // Log changes before applying updates
+      const changePromises: Promise<void>[] = [];
+      Object.keys(updates).forEach((key) => {
+        const oldValue = record[key] || '';
+        const newValue = updates[key] || '';
+        
+        // Only log if value actually changed
+        if (oldValue !== newValue) {
+          changePromises.push(
+            logUpdateToSheet({
+              serial: record.serial,
+              updatedBy: user?.username || 'unknown',
+              updatedAt: new Date().toISOString(),
+              fieldName: key,
+              oldValue: oldValue.toString(),
+              newValue: newValue.toString(),
+            })
+          );
+        }
+      });
+
       // Then, apply updates (overwrite with new values)
       Object.keys(updates).forEach((key) => {
         const index = headerIndices[key];
@@ -69,11 +92,14 @@ export function useSheetRecords() {
 
       await updateSheetRow(record.rowIndex, rowData);
       
+      // Log all changes to UpdatesLog sheet
+      await Promise.all(changePromises);
+      
       await fetchRecords();
       
       toast({
         title: 'تم التحديث بنجاح',
-        description: 'تم حفظ التعديلات على السجل',
+        description: 'تم حفظ التعديلات على السجل وتسجيلها في سجل التعديلات',
       });
     } catch (err: any) {
       toast({
