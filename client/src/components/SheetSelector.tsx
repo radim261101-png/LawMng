@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSheets } from '@/contexts/SheetsContext';
 import { fetchSpreadsheetSheets, type SpreadsheetSheet } from '@/lib/googleSheets';
 import { Button } from '@/components/ui/button';
@@ -9,13 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Sheet, Plus, Trash2, Check, Download, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+const DEFAULT_SPREADSHEET_ID = '1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4';
+
 export default function SheetSelector() {
   const { sheets, activeSheet, setActiveSheet, addSheet, removeSheet } = useSheets();
   const [isOpen, setIsOpen] = useState(false);
   const [newSheet, setNewSheet] = useState({
     id: '',
     name: '',
-    spreadsheetId: '',
+    spreadsheetId: DEFAULT_SPREADSHEET_ID,
     sheetName: '',
     updatesSheetName: '',
   });
@@ -119,6 +121,12 @@ export default function SheetSelector() {
     setHasLoadedSheets(false);
   };
 
+  useEffect(() => {
+    if (isOpen && !hasLoadedSheets && DEFAULT_SPREADSHEET_ID) {
+      handleLoadSheets();
+    }
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -180,44 +188,20 @@ export default function SheetSelector() {
           </div>
 
           <div className="border-t pt-4">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-4">
               <Plus className="w-4 h-4" />
-              <h3 className="font-medium">إضافة شيت جديد</h3>
+              <h3 className="font-medium">اختر شيت من السبريدشيت</h3>
             </div>
             
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="spreadsheetId" className="text-base">رابط أو معرف السبريدشيت</Label>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    id="spreadsheetId"
-                    placeholder="الصق هنا الرابط الكامل أو الـ ID فقط"
-                    value={newSheet.spreadsheetId}
-                    onChange={(e) => handleSpreadsheetIdChange(e.target.value)}
-                    data-testid="input-new-sheet-spreadsheet-id"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="default"
-                    onClick={handleLoadSheets}
-                    disabled={isLoadingSheets || !newSheet.spreadsheetId}
-                    data-testid="button-load-sheets"
-                  >
-                    {isLoadingSheets ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Download className="w-4 h-4" />
-                    )}
-                    <span className="mr-2">تحميل</span>
-                  </Button>
+              {isLoadingSheets && (
+                <div className="flex items-center justify-center gap-2 py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span className="text-muted-foreground">جاري تحميل الشيتات...</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  مثال: 1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4
-                </p>
-              </div>
+              )}
 
-              {hasLoadedSheets && availableSheets.length > 0 && (
+              {!isLoadingSheets && hasLoadedSheets && availableSheets.length > 0 && (
                 <div>
                   <Label htmlFor="sheetSelect" className="text-base">اختر الشيت</Label>
                   <Select 
@@ -235,9 +219,17 @@ export default function SheetSelector() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    ✓ تم العثور على {availableSheets.length} شيت
+                  <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    تم العثور على {availableSheets.length} شيت في السبريدشيت
                   </p>
+                </div>
+              )}
+
+              {!isLoadingSheets && hasLoadedSheets && availableSheets.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>لم يتم العثور على شيتات</p>
+                  <p className="text-xs mt-2">تأكد من صحة Google Sheets API Key</p>
                 </div>
               )}
 
@@ -274,6 +266,10 @@ export default function SheetSelector() {
                   إضافة الشيت
                 </Button>
               )}
+
+              <div className="text-xs text-muted-foreground text-center pt-2 border-t">
+                <p>السبريدشيت: {DEFAULT_SPREADSHEET_ID}</p>
+              </div>
             </div>
           </div>
         </div>
