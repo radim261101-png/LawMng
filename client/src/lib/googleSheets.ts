@@ -14,6 +14,29 @@ export interface SpreadsheetSheet {
   index: number;
 }
 
+function extractSpreadsheetId(input: string): string {
+  if (!input || !input.trim()) {
+    throw new Error('يرجى إدخال معرف الـ Spreadsheet أو الرابط');
+  }
+
+  const trimmedInput = input.trim();
+  
+  // Check if it's a full URL
+  const urlPattern = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
+  const match = trimmedInput.match(urlPattern);
+  
+  if (match && match[1]) {
+    return match[1];
+  }
+  
+  // If it's just an ID (no slashes or special characters)
+  if (/^[a-zA-Z0-9-_]+$/.test(trimmedInput)) {
+    return trimmedInput;
+  }
+  
+  throw new Error('الرجاء إدخال معرف Spreadsheet صحيح أو رابط Google Sheets كامل');
+}
+
 export async function fetchSpreadsheetSheets(spreadsheetId: string): Promise<SpreadsheetSheet[]> {
   const apiKey = getGoogleSheetsApiKey();
   
@@ -21,13 +44,11 @@ export async function fetchSpreadsheetSheets(spreadsheetId: string): Promise<Spr
     throw new Error('لم يتم العثور على مفتاح Google Sheets API');
   }
 
-  if (!spreadsheetId || !spreadsheetId.trim()) {
-    throw new Error('يرجى إدخال معرف الـ Spreadsheet');
-  }
+  const cleanId = extractSpreadsheetId(spreadsheetId);
 
   try {
     const response = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets(properties(title,sheetId,index))&key=${apiKey}`
+      `https://sheets.googleapis.com/v4/spreadsheets/${cleanId}?fields=sheets(properties(title,sheetId,index))&key=${apiKey}`
     );
 
     if (!response.ok) {

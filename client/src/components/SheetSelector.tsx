@@ -203,11 +203,11 @@ export default function SheetSelector() {
               </div>
 
               <div>
-                <Label htmlFor="spreadsheetId">Spreadsheet ID *</Label>
+                <Label htmlFor="spreadsheetId">Spreadsheet ID أو الرابط الكامل *</Label>
                 <div className="flex gap-2">
                   <Input
                     id="spreadsheetId"
-                    placeholder="من رابط Google Sheets"
+                    placeholder="ضع الـ ID أو الرابط الكامل من Google Sheets"
                     value={newSheet.spreadsheetId}
                     onChange={(e) => handleSpreadsheetIdChange(e.target.value)}
                     data-testid="input-new-sheet-spreadsheet-id"
@@ -229,7 +229,7 @@ export default function SheetSelector() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  اضغط "تحميل الشيتات" لجلب جميع الشيتات المتاحة في هذا الملف
+                  يمكنك وضع الرابط الكامل أو الـ ID فقط • سيتم استخراج الـ ID تلقائياً
                 </p>
               </div>
 
@@ -276,26 +276,38 @@ export default function SheetSelector() {
               <div>
                 <Label htmlFor="updatesSheetName">شيت سجل التعديلات (اختياري)</Label>
                 {hasLoadedSheets && availableSheets.length > 0 ? (
-                  <Select 
-                    value={newSheet.updatesSheetName} 
-                    onValueChange={(value) => setNewSheet({ ...newSheet, updatesSheetName: value })}
-                  >
-                    <SelectTrigger id="updatesSheetName" data-testid="select-updates-sheet">
-                      <SelectValue placeholder="اختر شيت سجل التعديلات..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">بدون</SelectItem>
-                      {availableSheets.map((sheet) => (
-                        <SelectItem key={`updates-${sheet.sheetId}`} value={sheet.title}>
-                          {sheet.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Select 
+                      value={newSheet.updatesSheetName || undefined} 
+                      onValueChange={(value) => setNewSheet({ ...newSheet, updatesSheetName: value })}
+                    >
+                      <SelectTrigger id="updatesSheetName" data-testid="select-updates-sheet">
+                        <SelectValue placeholder="اختر شيت سجل التعديلات (أو اتركه فارغاً)..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSheets.map((sheet) => (
+                          <SelectItem key={`updates-${sheet.sheetId}`} value={sheet.title}>
+                            {sheet.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {newSheet.updatesSheetName && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setNewSheet({ ...newSheet, updatesSheetName: '' })}
+                        className="text-xs"
+                      >
+                        إلغاء الاختيار
+                      </Button>
+                    )}
+                  </div>
                 ) : (
                   <Input
                     id="updatesSheetName"
-                    placeholder="مثال: UpdatesLog"
+                    placeholder="مثال: UpdatesLog (اختياري)"
                     value={newSheet.updatesSheetName}
                     onChange={(e) => setNewSheet({ ...newSheet, updatesSheetName: e.target.value })}
                     data-testid="input-new-sheet-updates-name"
