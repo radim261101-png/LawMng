@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import Navigation from '@/components/Navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { Clock, User, FileEdit } from 'lucide-react';
+import { Clock, User, FileEdit, AlertCircle } from 'lucide-react';
 import { getUpdatesLog } from '@/lib/googleSheets';
 
 interface RecordUpdate {
@@ -78,6 +79,20 @@ export default function UpdatesHistoryPage() {
           </p>
         </div>
 
+        <Alert className="mb-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+          <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-900 dark:text-blue-100 text-right">ملاحظة هامة</AlertTitle>
+          <AlertDescription className="text-blue-800 dark:text-blue-200 text-right">
+            لعرض سجل التعديلات، يجب عليك:
+            <ol className="list-decimal list-inside mt-2 space-y-1">
+              <li>إنشاء شيت جديد في Google Spreadsheet واسمه <strong>UpdatesLog</strong></li>
+              <li>في الصف الأول، أضف العناوين التالية: serial | updatedBy | updatedAt | fieldName | oldValue | newValue</li>
+              <li>تحديث Google Apps Script بالكود الموجود في ملف GOOGLE_APPS_SCRIPT_UPDATE.md</li>
+            </ol>
+            بعد ذلك، سيتم حفظ جميع التعديلات تلقائياً في هذا الشيت.
+          </AlertDescription>
+        </Alert>
+
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
@@ -86,10 +101,16 @@ export default function UpdatesHistoryPage() {
           </div>
         ) : !updates || updates.length === 0 ? (
           <Card>
+            <CardHeader>
+              <CardTitle className="text-right">لا توجد تعديلات حتى الآن</CardTitle>
+              <CardDescription className="text-right">
+                سيتم عرض التعديلات هنا بعد إنشاء شيت UpdatesLog وتحديث Google Apps Script
+              </CardDescription>
+            </CardHeader>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <FileEdit className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg text-muted-foreground">
-                لا توجد تعديلات حتى الآن
+              <p className="text-muted-foreground text-center">
+                تأكد من اتباع التعليمات أعلاه لتفعيل سجل التعديلات
               </p>
             </CardContent>
           </Card>
