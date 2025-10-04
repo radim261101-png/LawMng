@@ -141,9 +141,6 @@ export default function SheetSelector() {
                         )}
                         <div>
                           <div className="font-medium">{sheet.title}</div>
-                          <div className="text-xs text-muted-foreground">
-                            سجل التعديلات: UpdatesLog
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -160,17 +157,7 @@ export default function SheetSelector() {
             )}
           </div>
 
-          <div className="border-t pt-4">
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p className="flex items-center gap-2">
-                <span className="font-medium">السبريدشيت:</span>
-                <span className="font-mono bg-muted px-2 py-0.5 rounded">{spreadsheetId}</span>
-              </p>
-              <p className="text-green-600">
-                ✓ شيت سجل التعديلات: UpdatesLog (تلقائي)
-              </p>
-            </div>
-          </div>
+          
         </div>
       </DialogContent>
     </Dialog>
