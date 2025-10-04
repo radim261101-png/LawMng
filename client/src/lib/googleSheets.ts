@@ -220,17 +220,17 @@ export async function logUpdateToSheet(
     spreadsheetId: sheetConfig.spreadsheetId,
     sheetName: sheetConfig.updatesSheetName,
     updateData: {
-      ...updateData,
+      serial: updateData.serial,
+      updatedBy: updateData.updatedBy,
+      updatedAt: updateData.updatedAt,
+      fieldName: updateData.fieldName,
+      oldValue: updateData.oldValue,
+      newValue: updateData.newValue,
       sourceSheet: sheetConfig.sheetName,
     },
   };
 
-  console.log('📝 بيانات التعديل اللي هنبعتها:', {
-    sourceSheet: sheetConfig.sheetName,
-    serial: updateData.serial,
-    updatedBy: updateData.updatedBy,
-    fieldName: updateData.fieldName,
-  });
+  console.log('📝 الـ JSON الكامل اللي هيتبعت:', JSON.stringify(dataToSend, null, 2));
 
   try {
     await fetch(scriptUrl, {
@@ -242,7 +242,7 @@ export async function logUpdateToSheet(
       body: JSON.stringify(dataToSend),
     });
 
-    console.log('✅ تم إرسال التعديل بنجاح - الشيت المصدر:', sheetConfig.sheetName);
+    console.log('✅ تم إرسال التعديل بنجاح');
   } catch (error) {
     console.error('❌ خطأ في تسجيل التعديل:', error);
   }
