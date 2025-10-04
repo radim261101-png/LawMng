@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSheetRecords } from "@/hooks/useSheetRecords";
 import Navigation from "@/components/Navigation";
@@ -10,43 +10,79 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil, Search } from "lucide-react";
+import { RecordsPagination } from "@/components/RecordsPagination";
 import type { SheetRecord } from "@/hooks/useSheetRecords";
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export default function RecordsPage() {
   const { user } = useAuth();
   const { records, headers, isLoading, updateRecord } = useSheetRecords();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [editingRecord, setEditingRecord] = useState<SheetRecord | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isUpdating, setIsUpdating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
-  // Skip first column (usually serial number) for editing
   const editableHeaders = useMemo(() => {
     return headers.slice(1).filter(h => h && h.trim());
   }, [headers]);
 
-  const filteredRecords = records?.filter((record) => {
-    const searchLower = searchTerm.toLowerCase();
-    return Object.values(record).some(value => 
-      value?.toString().toLowerCase().includes(searchLower)
+  const filteredRecords = useMemo(() => {
+    if (!records) return [];
+    
+    if (!debouncedSearchTerm.trim()) return records;
+    
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    return records.filter((record) =>
+      Object.values(record).some(value => 
+        value?.toString().toLowerCase().includes(searchLower)
+      )
     );
-  });
+  }, [records, debouncedSearchTerm]);
 
-  const handleEdit = (record: SheetRecord) => {
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / itemsPerPage));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const paginatedRecords = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredRecords.slice(startIndex, endIndex);
+  }, [filteredRecords, currentPage, itemsPerPage]);
+
+  const handleEdit = useCallback((record: SheetRecord) => {
     setEditingRecord(record);
-    // Initialize form data differently based on role
     const initialData: Record<string, any> = {};
     if (user?.role === "admin") {
-      // Admin: initialize with all existing data for editing
       headers.forEach(header => {
         if (header && record[header] !== undefined) {
           initialData[header] = record[header];
         }
       });
     }
-    // Regular users: start with empty form (they will add new data only)
     setFormData(initialData);
-  };
+  }, [user?.role, headers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,28 +90,23 @@ export default function RecordsPage() {
 
     setIsUpdating(true);
     try {
-      // Prepare updates based on user role
       const updates: Record<string, any> = {};
       
       if (user?.role === "admin") {
-        // Admin can update all fields
         Object.keys(formData).forEach(key => {
           if (key !== 'id' && key !== 'rowIndex') {
             updates[key] = formData[key];
           }
         });
       } else {
-        // Regular users: append to existing fields
         editableHeaders.forEach(header => {
           const newValue = formData[header];
           const oldValue = editingRecord[header];
           
           if (newValue && newValue.toString().trim()) {
             if (oldValue && oldValue.toString().trim()) {
-              // Append new value to old value
               updates[header] = `${oldValue}\n${newValue}`;
             } else {
-              // Just set the new value
               updates[header] = newValue;
             }
           }
@@ -92,11 +123,21 @@ export default function RecordsPage() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const renderField = (fieldName: string) => {
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((items: number) => {
+    setItemsPerPage(items);
+    setCurrentPage(1);
+  }, []);
+
+  const renderField = useCallback((fieldName: string) => {
     const isAdmin = user?.role === "admin";
     const value = formData[fieldName] || "";
     const oldValue = editingRecord?.[fieldName];
@@ -136,7 +177,7 @@ export default function RecordsPage() {
         )}
       </div>
     );
-  };
+  }, [user?.role, formData, editingRecord, handleInputChange]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -147,8 +188,8 @@ export default function RecordsPage() {
           <p className="text-muted-foreground mt-1">عرض وتعديل السجلات القانونية من Google Sheets</p>
         </div>
 
-        <div className="mb-6">
-          <div className="relative max-w-md">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="relative max-w-md flex-1">
             <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
@@ -159,6 +200,11 @@ export default function RecordsPage() {
               data-testid="input-search"
             />
           </div>
+          {searchTerm && (
+            <span className="text-sm text-muted-foreground whitespace-nowrap">
+              {filteredRecords.length} نتيجة
+            </span>
+          )}
         </div>
 
         {isLoading ? (
@@ -168,51 +214,65 @@ export default function RecordsPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    {headers.slice(0, 8).map((header, index) => (
-                      <TableHead key={index} className="text-right font-semibold whitespace-nowrap">
-                        {header || `-`}
-                      </TableHead>
-                    ))}
-                    <TableHead className="text-center font-semibold">الإجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {!filteredRecords || filteredRecords.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={headers.length + 1} className="text-center py-8 text-muted-foreground">
-                        لا توجد سجلات متاحة
-                      </TableCell>
+          <>
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      {headers.slice(0, 8).map((header, index) => (
+                        <TableHead key={index} className="text-right font-semibold whitespace-nowrap">
+                          {header || `-`}
+                        </TableHead>
+                      ))}
+                      <TableHead className="text-center font-semibold">الإجراءات</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredRecords.map((record) => (
-                      <TableRow key={record.id} className="hover:bg-muted/50" data-testid={`row-record-${record.serial}`}>
-                        {headers.slice(0, 8).map((header, index) => (
-                          <TableCell key={index} className={index === 0 ? "font-medium" : ""}>
-                            {record[header] || "-"}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(record)}
-                            data-testid={`button-edit-${record.serial}`}
-                          >
-                            <Pencil className="w-4 h-4 text-primary" />
-                          </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {!paginatedRecords || paginatedRecords.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={headers.length + 1} className="text-center py-8 text-muted-foreground">
+                          {searchTerm ? "لا توجد نتائج للبحث" : "لا توجد سجلات متاحة"}
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      paginatedRecords.map((record) => (
+                        <TableRow key={record.id} className="hover:bg-muted/50" data-testid={`row-record-${record.serial}`}>
+                          {headers.slice(0, 8).map((header, index) => (
+                            <TableCell key={index} className={index === 0 ? "font-medium" : ""}>
+                              {record[header] || "-"}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(record)}
+                              data-testid={`button-edit-${record.serial}`}
+                            >
+                              <Pencil className="w-4 h-4 text-primary" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
+
+            {filteredRecords.length > 0 && (
+              <RecordsPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                totalItems={filteredRecords.length}
+                className="mt-4"
+              />
+            )}
+          </>
         )}
       </main>
 
