@@ -3,31 +3,24 @@ import { useSheets } from '@/contexts/SheetsContext';
 import { fetchSpreadsheetSheets, type SpreadsheetSheet } from '@/lib/googleSheets';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Sheet, Plus, Trash2, Check, Download, Loader2 } from 'lucide-react';
+import { Sheet, Check, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const DEFAULT_SPREADSHEET_ID = '1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4';
 
 export default function SheetSelector() {
-  const { sheets, activeSheet, setActiveSheet, addSheet, removeSheet } = useSheets();
+  const { sheets, activeSheet, setActiveSheet, addSheet } = useSheets();
   const [isOpen, setIsOpen] = useState(false);
-  const [newSheet, setNewSheet] = useState({
-    id: '',
-    name: '',
-    spreadsheetId: DEFAULT_SPREADSHEET_ID,
-    sheetName: '',
-    updatesSheetName: '',
-  });
+  const [spreadsheetId, setSpreadsheetId] = useState(DEFAULT_SPREADSHEET_ID);
   const [availableSheets, setAvailableSheets] = useState<SpreadsheetSheet[]>([]);
   const [isLoadingSheets, setIsLoadingSheets] = useState(false);
   const [hasLoadedSheets, setHasLoadedSheets] = useState(false);
   const { toast } = useToast();
 
-  const handleLoadSheets = async () => {
-    if (!newSheet.spreadsheetId || !newSheet.spreadsheetId.trim()) {
+  const handleLoadSheets = async (loadSpreadsheetId: string) => {
+    if (!loadSpreadsheetId || !loadSpreadsheetId.trim()) {
       toast({
         title: 'خطأ',
         description: 'يرجى إدخال معرف الـ Spreadsheet أولاً',
@@ -41,7 +34,7 @@ export default function SheetSelector() {
     setAvailableSheets([]);
 
     try {
-      const fetchedSheets = await fetchSpreadsheetSheets(newSheet.spreadsheetId);
+      const fetchedSheets = await fetchSpreadsheetSheets(loadSpreadsheetId);
       setAvailableSheets(fetchedSheets);
       setHasLoadedSheets(true);
       
@@ -61,98 +54,40 @@ export default function SheetSelector() {
     }
   };
 
-  const handleAddSheet = () => {
-    if (!newSheet.spreadsheetId || !newSheet.sheetName) {
+  const handleSelectSheet = (sheetTitle: string) => {
+    const existingSheet = sheets.find(
+      s => s.spreadsheetId === spreadsheetId && s.sheetName === sheetTitle
+    );
+
+    if (existingSheet) {
+      setActiveSheet(existingSheet);
       toast({
-        title: 'خطأ',
-        description: 'يرجى تحميل السبريدشيت واختيار شيت',
-        variant: 'destructive',
+        title: 'تم التبديل',
+        description: `تم التبديل إلى "${sheetTitle}"`,
       });
-      return;
-    }
+    } else {
+      const newSheetConfig = {
+        id: `sheet-${Date.now()}`,
+        name: sheetTitle,
+        spreadsheetId: spreadsheetId,
+        sheetName: sheetTitle,
+        updatesSheetName: 'UpdatesLog',
+      };
 
-    const autoId = `sheet-${Date.now()}`;
-    const autoName = newSheet.sheetName;
-
-    addSheet({
-      id: autoId,
-      name: autoName,
-      spreadsheetId: newSheet.spreadsheetId,
-      sheetName: newSheet.sheetName,
-      updatesSheetName: newSheet.updatesSheetName && newSheet.updatesSheetName !== '__none__' ? newSheet.updatesSheetName : undefined,
-    });
-
-    setNewSheet({
-      id: '',
-      name: '',
-      spreadsheetId: DEFAULT_SPREADSHEET_ID,
-      sheetName: '',
-      updatesSheetName: '',
-    });
-    setAvailableSheets([]);
-    setHasLoadedSheets(false);
-    setIsOpen(false);
-
-    toast({
-      title: 'تم الإضافة بنجاح',
-      description: `تم إضافة الشيت "${autoName}"`,
-    });
-  };
-
-  const handleRemoveSheet = (id: string) => {
-    if (sheets.length === 1) {
+      addSheet(newSheetConfig);
+      setActiveSheet(newSheetConfig);
+      
       toast({
-        title: 'لا يمكن الحذف',
-        description: 'يجب أن يكون هناك شيت واحد على الأقل',
-        variant: 'destructive',
+        title: 'تم الإضافة والتبديل',
+        description: `تم إضافة والتبديل إلى "${sheetTitle}"`,
       });
-      return;
     }
-
-    removeSheet(id);
-    toast({
-      title: 'تم الحذف',
-      description: 'تم حذف الشيت',
-    });
-  };
-
-  const handleSpreadsheetIdChange = (value: string) => {
-    setNewSheet({ ...newSheet, spreadsheetId: value });
-    setAvailableSheets([]);
-    setHasLoadedSheets(false);
   };
 
   useEffect(() => {
     if (isOpen && DEFAULT_SPREADSHEET_ID) {
-      setNewSheet({
-        id: '',
-        name: '',
-        spreadsheetId: DEFAULT_SPREADSHEET_ID,
-        sheetName: '',
-        updatesSheetName: '',
-      });
-      setAvailableSheets([]);
-      setHasLoadedSheets(false);
-      
-      const loadSheets = async () => {
-        setIsLoadingSheets(true);
-        try {
-          const fetchedSheets = await fetchSpreadsheetSheets(DEFAULT_SPREADSHEET_ID);
-          setAvailableSheets(fetchedSheets);
-          setHasLoadedSheets(true);
-        } catch (error: any) {
-          toast({
-            title: 'خطأ في تحميل الشيتات',
-            description: error.message || 'تأكد من إضافة Google Sheets API Key',
-            variant: 'destructive',
-          });
-          setHasLoadedSheets(false);
-        } finally {
-          setIsLoadingSheets(false);
-        }
-      };
-      
-      loadSheets();
+      setSpreadsheetId(DEFAULT_SPREADSHEET_ID);
+      handleLoadSheets(DEFAULT_SPREADSHEET_ID);
     }
   }, [isOpen]);
 
@@ -166,139 +101,74 @@ export default function SheetSelector() {
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle>إدارة الشيتات</DialogTitle>
+          <DialogTitle>اختيار الشيت النشط</DialogTitle>
           <DialogDescription>
-            اختر شيت أو أضف شيت جديد للعمل عليه
+            اختر شيت من القائمة للتبديل إليه
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           <div className="space-y-3">
-            <Label>الشيت النشط</Label>
-            <div className="grid gap-2">
-              {sheets.map((sheet) => (
-                <div
-                  key={sheet.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                    activeSheet.id === sheet.id
-                      ? 'bg-primary/10 border-primary'
-                      : 'hover:bg-muted'
-                  }`}
-                  onClick={() => setActiveSheet(sheet)}
-                  data-testid={`sheet-item-${sheet.id}`}
-                >
-                  <div className="flex items-center gap-3">
-                    {activeSheet.id === sheet.id && (
-                      <Check className="w-4 h-4 text-primary" />
-                    )}
-                    <div>
-                      <div className="font-medium">{sheet.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {sheet.sheetName} - {sheet.spreadsheetId.slice(0, 15)}...
+            <Label className="text-base font-medium">الشيت النشط</Label>
+            
+            {isLoadingSheets && (
+              <div className="flex items-center justify-center gap-2 py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <span className="text-muted-foreground">جاري تحميل الشيتات...</span>
+              </div>
+            )}
+
+            {!isLoadingSheets && hasLoadedSheets && availableSheets.length > 0 && (
+              <div className="grid gap-2">
+                {availableSheets.map((sheet) => {
+                  const isActive = activeSheet.spreadsheetId === spreadsheetId && 
+                                   activeSheet.sheetName === sheet.title;
+                  
+                  return (
+                    <div
+                      key={sheet.sheetId}
+                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                        isActive
+                          ? 'bg-primary/10 border-primary'
+                          : 'hover:bg-muted'
+                      }`}
+                      onClick={() => handleSelectSheet(sheet.title)}
+                      data-testid={`sheet-item-${sheet.title}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isActive && (
+                          <Check className="w-4 h-4 text-primary" />
+                        )}
+                        <div>
+                          <div className="font-medium">{sheet.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            سجل التعديلات: UpdatesLog
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {sheets.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveSheet(sheet.id);
-                      }}
-                      data-testid={`button-remove-${sheet.id}`}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!isLoadingSheets && hasLoadedSheets && availableSheets.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>لم يتم العثور على شيتات</p>
+                <p className="text-xs mt-2">تأكد من صحة Google Sheets API Key</p>
+              </div>
+            )}
           </div>
 
           <div className="border-t pt-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Plus className="w-4 h-4" />
-              <h3 className="font-medium">اختر شيت من السبريدشيت</h3>
-            </div>
-            
-            <div className="space-y-4">
-              {isLoadingSheets && (
-                <div className="flex items-center justify-center gap-2 py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  <span className="text-muted-foreground">جاري تحميل الشيتات...</span>
-                </div>
-              )}
-
-              {!isLoadingSheets && hasLoadedSheets && availableSheets.length > 0 && (
-                <div>
-                  <Label htmlFor="sheetSelect" className="text-base">اختر الشيت</Label>
-                  <Select 
-                    value={newSheet.sheetName} 
-                    onValueChange={(value) => setNewSheet({ ...newSheet, sheetName: value })}
-                  >
-                    <SelectTrigger id="sheetSelect" data-testid="select-available-sheet" className="mt-2">
-                      <SelectValue placeholder="اختر شيت من القائمة..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSheets.map((sheet) => (
-                        <SelectItem key={sheet.sheetId} value={sheet.title}>
-                          {sheet.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
-                    <Check className="w-3 h-3" />
-                    تم العثور على {availableSheets.length} شيت في السبريدشيت
-                  </p>
-                </div>
-              )}
-
-              {!isLoadingSheets && hasLoadedSheets && availableSheets.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>لم يتم العثور على شيتات</p>
-                  <p className="text-xs mt-2">تأكد من صحة Google Sheets API Key</p>
-                </div>
-              )}
-
-              {hasLoadedSheets && availableSheets.length > 0 && (
-                <div>
-                  <Label htmlFor="updatesSheetName" className="text-sm">شيت سجل التعديلات (اختياري)</Label>
-                  <Select 
-                    value={newSheet.updatesSheetName || ''} 
-                    onValueChange={(value) => setNewSheet({ ...newSheet, updatesSheetName: value })}
-                  >
-                    <SelectTrigger id="updatesSheetName" data-testid="select-updates-sheet" className="mt-2">
-                      <SelectValue placeholder="لا يوجد" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">لا يوجد</SelectItem>
-                      {availableSheets.map((sheet) => (
-                        <SelectItem key={`updates-${sheet.sheetId}`} value={sheet.title}>
-                          {sheet.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {hasLoadedSheets && availableSheets.length > 0 && (
-                <Button 
-                  onClick={handleAddSheet} 
-                  className="w-full"
-                  data-testid="button-add-sheet"
-                  disabled={!newSheet.sheetName}
-                >
-                  <Plus className="w-4 h-4 ml-2" />
-                  إضافة الشيت
-                </Button>
-              )}
-
-              <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-                <p>السبريدشيت: {DEFAULT_SPREADSHEET_ID}</p>
-              </div>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p className="flex items-center gap-2">
+                <span className="font-medium">السبريدشيت:</span>
+                <span className="font-mono bg-muted px-2 py-0.5 rounded">{spreadsheetId}</span>
+              </p>
+              <p className="text-green-600">
+                ✓ شيت سجل التعديلات: UpdatesLog (تلقائي)
+              </p>
             </div>
           </div>
         </div>
