@@ -6,6 +6,47 @@ A bilingual (Arabic/English) legal case management system built with React and G
 
 ## Recent Changes
 
+### October 4, 2025 - Multi-Sheet Support & Advanced Analytics
+**Major Features Added:**
+- ✅ **Multi-Sheet Management System**: 
+  - Added ability to manage and switch between multiple Google Sheets
+  - Created `SheetsContext` for centralized sheet management
+  - Sheet configurations stored in localStorage for persistence
+  - Users can add, remove, and switch between different sheets
+  - Each sheet can have its own spreadsheet ID and sheet names
+  
+- ✅ **Sheet Selector Component**:
+  - Visual interface to select active sheet
+  - Add new sheets with custom names and IDs
+  - Remove sheets (minimum 1 sheet required)
+  - Shows active sheet indicator with checkmark
+  
+- ✅ **Enhanced Analytics Page**:
+  - Interactive bar charts for company distribution
+  - Pie chart for litigation level breakdown
+  - Horizontal bar chart for lawyer performance
+  - Bar chart for governorate distribution
+  - Advanced statistics cards showing:
+    - Total records, companies, lawyers, and document value
+    - Number of governorates and archive statuses
+    - Average document value calculation
+  - Uses Recharts library for professional data visualization
+  
+- ✅ **Updated All Pages**:
+  - All pages now respect the active sheet selection
+  - Records page fetches data from selected sheet
+  - Analytics calculates stats from selected sheet
+  - Updates history shows logs from selected sheet's UpdatesLog
+  
+**Technical Implementation:**
+- Created `SheetsContext.tsx` for global sheet state management
+- Updated `googleSheets.ts` to accept `SheetConfig` parameter
+- Modified `useSheetRecords` hook to use active sheet from context
+- Added `SheetSelector.tsx` component with dialog interface
+- Integrated sheet selector into Navigation component
+- Enhanced `AnalyticsPage.tsx` with Recharts visualizations
+- All functions now support dynamic sheet selection
+
 ### October 4, 2025 - Updates History & Analytics Enhancement
 **Major Features Added:**
 - ✅ **Updates History Page**: Admin-only page to view all record modifications
@@ -91,11 +132,12 @@ Preferred communication style: Simple, everyday language.
 **Framework**: React 18 with TypeScript
 - **Routing**: Wouter (lightweight client-side routing)
 - **State Management**: 
-  - React Context API for authentication
+  - React Context API for authentication and sheet management
   - TanStack Query (React Query) for server state management
 - **UI Framework**: shadcn/ui components with Radix UI primitives
 - **Styling**: Tailwind CSS with custom Material Design-inspired theme
 - **Form Handling**: React Hook Form with Zod validation
+- **Data Visualization**: Recharts for interactive charts and graphs
 
 **Design System**:
 - RTL-first design with Arabic fonts (Cairo, Tajawal via Google Fonts)
@@ -106,11 +148,12 @@ Preferred communication style: Simple, everyday language.
 
 **Key Architectural Decisions**:
 - Component-based architecture with separation of concerns
-- Context providers for authentication
+- Context providers for authentication and sheet management
 - Protected routes with role-based access control (admin vs. user)
 - Toast notifications for user feedback
 - Reusable UI components following shadcn/ui patterns
 - Conditional rendering of edit forms based on user role (append-only vs full edit)
+- Multi-sheet support with dynamic switching between data sources
 
 ### Backend Architecture (REMOVED - Frontend Only)
 
@@ -125,11 +168,15 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 
-**Database**: PostgreSQL via Neon serverless
-- **ORM**: Drizzle ORM with Drizzle Kit for migrations
-- **Schema Location**: `shared/schema.ts`
+**Primary Storage**: Google Sheets
+- Each sheet configuration includes:
+  - Spreadsheet ID
+  - Main sheet name (for records)
+  - Updates sheet name (for change logs)
+- Support for multiple sheets with easy switching
+- Real-time data fetching via Google Sheets API v4
 
-**Database Schema**:
+**Database Schema (Legacy - not used)**:
 
 1. **users table**:
    - id (UUID, auto-generated)
@@ -158,19 +205,11 @@ Preferred communication style: Simple, everyday language.
    - oldValue (text)
    - newValue (text)
 
-**Key Architectural Decisions**:
-- UUID primary keys for distributed system compatibility
-- Text-based date storage (flexibility for partial dates and Arabic calendar formats)
-- Denormalized schema prioritizing query simplicity over normalization
-- All optional fields except id, serial, and createdBy for flexible data entry
-- Audit trail via record_updates table for tracking all changes
-
 ### Authentication & Authorization
 
-**Current Implementation**: Session-based authentication
+**Current Implementation**: localStorage-based authentication
 - Admin user: `admin/admin123`
 - Regular user: `user/user123`
-- Session management via express-session
 - Role-based access control (admin, user)
 
 **Authorization Model**:
@@ -182,16 +221,14 @@ Preferred communication style: Simple, everyday language.
   - New data is appended with newline separator
 - Protected routes enforce authentication and role requirements
 
-**Migration Path**: Schema prepared for PostgreSQL-backed authentication with password hashing
-
 ### External Dependencies
 
 **Core Runtime Dependencies**:
-- `@neondatabase/serverless`: Neon PostgreSQL serverless driver
-- `drizzle-orm`: Type-safe ORM with PostgreSQL dialect
+- `@neondatabase/serverless`: Neon PostgreSQL serverless driver (legacy)
+- `drizzle-orm`: Type-safe ORM with PostgreSQL dialect (legacy)
 - `drizzle-zod`: Schema-to-Zod validation generator
-- `express`: Web application framework
-- `express-session`: Session middleware for Express
+- `express`: Web application framework (legacy)
+- `express-session`: Session middleware for Express (legacy)
 
 **Frontend Libraries**:
 - `react` & `react-dom`: UI framework
@@ -200,6 +237,7 @@ Preferred communication style: Simple, everyday language.
 - `react-hook-form`: Form state management
 - `zod`: Runtime type validation
 - `@hookform/resolvers`: Zod integration for react-hook-form
+- `recharts`: Chart and graph library for data visualization
 
 **UI Component Libraries** (Radix UI):
 - Complete set of accessible, unstyled components
@@ -223,11 +261,11 @@ Preferred communication style: Simple, everyday language.
 - `date-fns`: Date manipulation and formatting
 
 **Key Integration Decisions**:
-- No external authentication service (prepared for self-hosted auth)
+- No external authentication service (localStorage-based auth)
 - No cloud storage integration (file storage not implemented)
 - No external notification services (toast notifications only)
 - No analytics or monitoring services in current implementation
-- Prepared for PostgreSQL migration but currently using in-memory storage
+- Google Sheets as primary data source
 
 ## Replit Environment Setup (October 3, 2025)
 
@@ -253,10 +291,11 @@ Preferred communication style: Simple, everyday language.
 - Application serves both frontend and backend on same port
 
 **Google Sheets Integration:**
-- Uses Replit's Google Sheets connector (google-sheet==1.0.0)
-- Authenticated via REPL_IDENTITY/WEB_REPL_RENEWAL tokens
-- Spreadsheet ID configured in server/googleSheets.ts
-- Automatic OAuth token management with expiry handling
+- Uses direct Google Sheets API v4 calls from frontend
+- API Key configured in environment variables
+- Google Apps Script URL for write operations
+- Spreadsheet ID configured in code
+- Support for multiple sheets with dynamic switching
 
 **Testing Credentials:**
 - Admin: `admin / admin123`
