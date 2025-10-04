@@ -3,6 +3,7 @@ import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { LogOut, Scale, User, FileText, BarChart3, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SheetSelector from '@/components/SheetSelector';
 
 export default function Navigation() {
   const { user, logout } = useAuth();
@@ -35,6 +36,7 @@ export default function Navigation() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <SheetSelector />
             <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-md">
               <User className="w-4 h-4 text-muted-foreground" />
               <span className="font-medium text-sm" data-testid="text-username">{user?.username}</span>

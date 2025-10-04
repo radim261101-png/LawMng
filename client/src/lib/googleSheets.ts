@@ -1,6 +1,4 @@
-const SPREADSHEET_ID = '1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4';
-const MAIN_SHEET_NAME = 'Sheet1';
-const UPDATES_SHEET_NAME = 'UpdatesLog';
+import type { SheetConfig } from '@/contexts/SheetsContext';
 
 const getGoogleSheetsApiKey = () => {
   return import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || '';
@@ -10,21 +8,28 @@ export interface SheetRecord {
   [key: string]: any;
 }
 
-export async function fetchSheetData(sheetName: string = MAIN_SHEET_NAME): Promise<any[][]> {
+export async function fetchSheetData(
+  sheetConfig: SheetConfig,
+  sheetType: 'main' | 'updates' = 'main'
+): Promise<any[][]> {
   const apiKey = getGoogleSheetsApiKey();
   
   if (!apiKey) {
     console.warn('No Google Sheets API key found. Using demo data.');
-    return sheetName === MAIN_SHEET_NAME ? getDemoData() : [];
+    return sheetType === 'main' ? getDemoData() : [];
   }
+
+  const sheetName = sheetType === 'updates' && sheetConfig.updatesSheetName 
+    ? sheetConfig.updatesSheetName 
+    : sheetConfig.sheetName;
 
   try {
     const response = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!A:CZ?key=${apiKey}`
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetConfig.spreadsheetId}/values/${sheetName}!A:CZ?key=${apiKey}`
     );
 
     if (!response.ok) {
-      if (response.status === 400 && sheetName === UPDATES_SHEET_NAME) {
+      if (response.status === 400 && sheetType === 'updates') {
         console.warn(`Sheet "${sheetName}" not found. Please create it in Google Sheets with headers: serial, updatedBy, updatedAt, fieldName, oldValue, newValue`);
         return [];
       }
@@ -35,18 +40,18 @@ export async function fetchSheetData(sheetName: string = MAIN_SHEET_NAME): Promi
     return data.values || [];
   } catch (error) {
     console.error('Error fetching sheet data:', error);
-    return sheetName === MAIN_SHEET_NAME ? getDemoData() : [];
+    return sheetType === 'main' ? getDemoData() : [];
   }
 }
 
-export async function getSheetHeaders(): Promise<string[]> {
-  const data = await fetchSheetData();
+export async function getSheetHeaders(sheetConfig: SheetConfig): Promise<string[]> {
+  const data = await fetchSheetData(sheetConfig, 'main');
   if (data.length === 0) return [];
   return data[0] || [];
 }
 
-export async function getSheetRecords(): Promise<any[]> {
-  const data = await fetchSheetData();
+export async function getSheetRecords(sheetConfig: SheetConfig): Promise<any[]> {
+  const data = await fetchSheetData(sheetConfig, 'main');
   if (data.length === 0) return [];
   
   const headers = data[0];
@@ -77,7 +82,11 @@ export async function getSheetRecords(): Promise<any[]> {
   return records;
 }
 
-export async function updateSheetRow(rowIndex: number, values: any[]): Promise<void> {
+export async function updateSheetRow(
+  sheetConfig: SheetConfig,
+  rowIndex: number,
+  values: any[]
+): Promise<void> {
   const scriptUrl = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
   
   if (!scriptUrl) {
@@ -94,7 +103,8 @@ export async function updateSheetRow(rowIndex: number, values: any[]): Promise<v
       },
       body: JSON.stringify({
         action: 'updateRow',
-        sheetName: MAIN_SHEET_NAME,
+        spreadsheetId: sheetConfig.spreadsheetId,
+        sheetName: sheetConfig.sheetName,
         rowIndex: rowIndex,
         values: values,
       }),
@@ -107,18 +117,26 @@ export async function updateSheetRow(rowIndex: number, values: any[]): Promise<v
   }
 }
 
-export async function logUpdateToSheet(updateData: {
-  serial: number;
-  updatedBy: string;
-  updatedAt: string;
-  fieldName: string;
-  oldValue: string;
-  newValue: string;
-}): Promise<void> {
+export async function logUpdateToSheet(
+  sheetConfig: SheetConfig,
+  updateData: {
+    serial: number;
+    updatedBy: string;
+    updatedAt: string;
+    fieldName: string;
+    oldValue: string;
+    newValue: string;
+  }
+): Promise<void> {
   const scriptUrl = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
   
   if (!scriptUrl) {
     console.warn('Google Apps Script URL not configured - update not logged');
+    return;
+  }
+
+  if (!sheetConfig.updatesSheetName) {
+    console.warn('Updates sheet not configured for this sheet');
     return;
   }
 
@@ -131,7 +149,8 @@ export async function logUpdateToSheet(updateData: {
       },
       body: JSON.stringify({
         action: 'logUpdate',
-        sheetName: UPDATES_SHEET_NAME,
+        spreadsheetId: sheetConfig.spreadsheetId,
+        sheetName: sheetConfig.updatesSheetName,
         updateData: updateData,
       }),
     });
@@ -142,9 +161,9 @@ export async function logUpdateToSheet(updateData: {
   }
 }
 
-export async function getUpdatesLog(): Promise<any[]> {
+export async function getUpdatesLog(sheetConfig: SheetConfig): Promise<any[]> {
   try {
-    const data = await fetchSheetData(UPDATES_SHEET_NAME);
+    const data = await fetchSheetData(sheetConfig, 'updates');
     if (data.length === 0) return [];
     
     const headers = data[0];

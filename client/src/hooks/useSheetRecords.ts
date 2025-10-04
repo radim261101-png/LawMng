@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getSheetRecords, getSheetHeaders, updateSheetRow, logUpdateToSheet } from '@/lib/googleSheets';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSheets } from '@/contexts/SheetsContext';
 
 export interface SheetRecord {
   id: string;
@@ -17,14 +18,15 @@ export function useSheetRecords() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { activeSheet } = useSheets();
 
   const fetchRecords = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const [recordsData, headersData] = await Promise.all([
-        getSheetRecords(),
-        getSheetHeaders(),
+        getSheetRecords(activeSheet),
+        getSheetHeaders(activeSheet),
       ]);
       setRecords(recordsData);
       setHeaders(headersData);
@@ -38,7 +40,7 @@ export function useSheetRecords() {
 
   useEffect(() => {
     fetchRecords();
-  }, []);
+  }, [activeSheet]);
 
   const updateRecord = async (record: SheetRecord, updates: Record<string, any>) => {
     try {
@@ -49,23 +51,20 @@ export function useSheetRecords() {
 
       const rowData = new Array(headers.length).fill('');
       
-      // First, fill in all existing data from the record
       headers.forEach((header, index) => {
         if (header && record[header] !== undefined && record[header] !== null) {
           rowData[index] = record[header];
         }
       });
 
-      // Log changes before applying updates
       const changePromises: Promise<void>[] = [];
       Object.keys(updates).forEach((key) => {
         const oldValue = record[key] || '';
         const newValue = updates[key] || '';
         
-        // Only log if value actually changed
         if (oldValue !== newValue) {
           changePromises.push(
-            logUpdateToSheet({
+            logUpdateToSheet(activeSheet, {
               serial: record.serial,
               updatedBy: user?.username || 'unknown',
               updatedAt: new Date().toISOString(),
@@ -77,7 +76,6 @@ export function useSheetRecords() {
         }
       });
 
-      // Then, apply updates (overwrite with new values)
       Object.keys(updates).forEach((key) => {
         const index = headerIndices[key];
         if (index !== undefined) {
@@ -85,14 +83,12 @@ export function useSheetRecords() {
         }
       });
 
-      // Ensure serial number is always present
       if (rowData[0] === '' || rowData[0] === null) {
         rowData[0] = record.serial.toString();
       }
 
-      await updateSheetRow(record.rowIndex, rowData);
+      await updateSheetRow(activeSheet, record.rowIndex, rowData);
       
-      // Log all changes to UpdatesLog sheet
       await Promise.all(changePromises);
       
       await fetchRecords();
