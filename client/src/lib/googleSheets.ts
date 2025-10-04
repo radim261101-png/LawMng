@@ -226,7 +226,10 @@ export async function logUpdateToSheet(
         action: 'logUpdate',
         spreadsheetId: sheetConfig.spreadsheetId,
         sheetName: sheetConfig.updatesSheetName,
-        updateData: updateData,
+        updateData: {
+          ...updateData,
+          sourceSheet: sheetConfig.sheetName,
+        },
       }),
     });
 
@@ -261,7 +264,13 @@ export async function getUpdatesLog(sheetConfig: SheetConfig): Promise<any[]> {
       updates.push(update);
     }
 
-    return updates.reverse();
+    // فلترة التعديلات بناءً على الشيت المصدر
+    const filteredUpdates = updates.filter(update => {
+      const sourceSheet = update.sourceSheet || update['الشيت المصدر'] || update['sourceSheet'];
+      return !sourceSheet || sourceSheet === sheetConfig.sheetName;
+    });
+
+    return filteredUpdates.reverse();
   } catch (error) {
     console.warn('UpdatesLog sheet not found or error fetching data:', error);
     return [];

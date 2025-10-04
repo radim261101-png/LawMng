@@ -7,7 +7,7 @@
 - أضف شيت جديد بالضغط على زر "+"
 - اسم الشيت: `UpdatesLog`
 - في الصف الأول، أضف العناوين التالية:
-  - `serial` | `updatedBy` | `updatedAt` | `fieldName` | `oldValue` | `newValue`
+  - `serial` | `updatedBy` | `updatedAt` | `fieldName` | `oldValue` | `newValue` | `sourceSheet`
 
 ### 2. تحديث كود Google Apps Script
 
@@ -69,8 +69,8 @@ function handleLogUpdate(data) {
   if (!sheet) {
     sheet = spreadsheet.insertSheet(sheetName);
     // Add headers
-    sheet.getRange(1, 1, 1, 6).setValues([[
-      'serial', 'updatedBy', 'updatedAt', 'fieldName', 'oldValue', 'newValue'
+    sheet.getRange(1, 1, 1, 7).setValues([[
+      'serial', 'updatedBy', 'updatedAt', 'fieldName', 'oldValue', 'newValue', 'sourceSheet'
     ]]);
   }
   
@@ -83,7 +83,8 @@ function handleLogUpdate(data) {
     updateData.updatedAt,
     updateData.fieldName,
     updateData.oldValue,
-    updateData.newValue
+    updateData.newValue,
+    updateData.sourceSheet || ''
   ]);
   
   return ContentService.createTextOutput(JSON.stringify({
