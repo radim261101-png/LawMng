@@ -1,0 +1,127 @@
+caught (in promise) 
+Object
+code
+: 
+403
+data
+: 
+{code: 403, msg: 'permission error', error: 'exceptions.UserAuthError'}
+handled
+: 
+false
+httpError
+: 
+false
+httpStatus
+: 
+200
+httpStatusText
+: 
+""
+message
+: 
+"permission error"
+name
+: 
+"i"
+originalError
+: 
+{name: 'Error', message: 'permission error', stack: 'Error: permission error\n    at te.handleRes (chrom…djiifimnepkibjfjbppnjble/background.js:4644:4296)'}
+reqInfo
+: 
+{id: 2, pathPrefix: '/generate', method: 'POST', path: '/tone', cmd: {…}, …}
+[[Prototype]]
+: 
+Object
+sheets.googleapis.co…9bba3e355a1012c10:1 
+ 
+ Failed to load resource: the server responded with a status of 400 ()
+index-UbFVcExX.js:113 
+ Error fetching sheet data: Error: Failed to fetch sheet data: 
+    at Pv (index-UbFVcExX.js:113:62842)
+    at async yE (index-UbFVcExX.js:113:63106)
+    at async Promise.all (index 0)
+    at async u (index-UbFVcExX.js:113:64327)
+Pv	@	index-UbFVcExX.js:113
+dashboard:1 
+ Uncaught (in promise) 
+Object
+code
+: 
+403
+data
+: 
+{code: 403, msg: 'permission error', error: 'exceptions.UserAuthError'}
+handled
+: 
+false
+httpError
+: 
+false
+httpStatus
+: 
+200
+httpStatusText
+: 
+""
+message
+: 
+"permission error"
+name
+: 
+"i"
+originalError
+: 
+{name: 'Error', message: 'permission error', stack: 'Error: permission error\n    at te.handleRes (chrom…jiifimnepkibjfjbppnjble/background.js:4556:11265)'}
+reqInfo
+: 
+{id: 3, pathPrefix: '/writing', method: 'GET', path: '/get_template_list', cmd: null, …}
+[[Prototype]]
+: 
+Object
+dashboard:1 
+ Uncaught (in promise) 
+Object
+code
+: 
+403
+data
+: 
+{code: 403, msg: 'permission error'}
+handled
+: 
+false
+httpError
+: 
+false
+httpStatus
+: 
+200
+httpStatusText
+: 
+""
+message
+: 
+"permission error"
+name
+: 
+"i"
+originalError
+: 
+{name: 'Error', message: 'permission error', stack: 'Error: permission error\n    at Te.handleRes (chrom…jiifimnepkibjfjbppnjble/background.js:4556:11265)'}
+reqInfo
+: 
+{id: 1, pathPrefix: '/site_integration', method: 'GET', path: '/template_list', cmd: null, …}
+[[Prototype]]
+: 
+Object
+sheets.googleapis.co…9bba3e355a1012c10:1 
+ 
+ Failed to load resource: the server responded with a status of 400 ()
+index-UbFVcExX.js:113 
+ Error fetching sheet data: Error: Failed to fetch sheet data: 
+    at Pv (index-UbFVcExX.js:113:62842)
+    at async gE (index-UbFVcExX.js:113:63029)
+    at async Promise.all (index 1)
+    at async u (index-UbFVcExX.js:113:64327)
+Pv	@	index-UbFVcExX.js:113
