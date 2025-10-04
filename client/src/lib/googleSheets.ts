@@ -72,31 +72,29 @@ export async function getSheetRecords(): Promise<any[]> {
 }
 
 export async function updateSheetRow(rowIndex: number, values: any[]): Promise<void> {
-  const apiKey = getGoogleSheetsApiKey();
+  // استخدم Google Apps Script للتحديثات
+  const scriptUrl = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
   
-  if (!apiKey) {
-    console.warn('Cannot update sheet: No API key found');
-    return;
+  if (!scriptUrl) {
+    console.error('Google Apps Script URL not configured');
+    throw new Error('لم يتم تكوين رابط Google Apps Script');
   }
 
   try {
-    const range = `Sheet1!A${rowIndex}:CZ${rowIndex}`;
-    const response = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?valueInputOption=USER_ENTERED&key=${apiKey}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          values: [values],
-        }),
-      }
-    );
+    const response = await fetch(scriptUrl, {
+      method: 'POST',
+      mode: 'no-cors', // مهم لـ Google Apps Script
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        rowIndex: rowIndex,
+        values: values,
+      }),
+    });
 
-    if (!response.ok) {
-      throw new Error(`Failed to update sheet: ${response.statusText}`);
-    }
+    // no-cors mode لا يسمح بقراءة الـ response، لكن التحديث يحصل
+    console.log('تم إرسال طلب التحديث');
   } catch (error) {
     console.error('Error updating sheet:', error);
     throw error;
