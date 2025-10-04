@@ -1,57 +1,38 @@
 import { google } from 'googleapis';
 
-let connectionSettings: any;
-
-async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
-    return connectionSettings.settings.access_token;
-  }
-  
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
-
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
-  }
-
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-sheet',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  const accessToken = connectionSettings?.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
-
-  if (!connectionSettings || !accessToken) {
-    throw new Error('Google Sheet not connected');
-  }
-  return accessToken;
-}
-
-export async function getUncachableGoogleSheetClient() {
-  const accessToken = await getAccessToken();
-
-  const oauth2Client = new google.auth.OAuth2();
-  oauth2Client.setCredentials({
-    access_token: accessToken
-  });
-
-  return google.sheets({ version: 'v4', auth: oauth2Client });
-}
-
 const SPREADSHEET_ID = '1osNFfmWeDLb39IoAcylhxkMmxVoj0WTIAFxpkA1ghO4';
 
+// Service Account credentials from environment variable
+function getServiceAccountCredentials() {
+  const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+
+  if (!credentialsJson) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY environment variable not set');
+  }
+
+  try {
+    return JSON.parse(credentialsJson);
+  } catch (error) {
+    throw new Error('Invalid GOOGLE_SERVICE_ACCOUNT_KEY JSON format');
+  }
+}
+
+export async function getGoogleSheetClient() {
+  const credentials = getServiceAccountCredentials();
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: credentials,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+
+  const authClient = await auth.getClient();
+
+  return google.sheets({ version: 'v4', auth: authClient });
+}
+
 export async function getSheetData() {
-  const sheets = await getUncachableGoogleSheetClient();
-  
+  const sheets = await getGoogleSheetClient();
+
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: 'Sheet1!A:BZ',
@@ -61,8 +42,8 @@ export async function getSheetData() {
 }
 
 export async function appendRowToSheet(values: any[]) {
-  const sheets = await getUncachableGoogleSheetClient();
-  
+  const sheets = await getGoogleSheetClient();
+
   const response = await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
     range: 'Sheet1!A:BZ',
@@ -76,8 +57,8 @@ export async function appendRowToSheet(values: any[]) {
 }
 
 export async function updateRowInSheet(rowIndex: number, values: any[]) {
-  const sheets = await getUncachableGoogleSheetClient();
-  
+  const sheets = await getGoogleSheetClient();
+
   const response = await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
     range: `Sheet1!A${rowIndex}:BZ${rowIndex}`,
