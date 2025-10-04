@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, FileText, Scale, TrendingUp } from "lucide-react";
 
 export default function AnalyticsPage() {
-  const { records, isLoading } = useSheetRecords();
+  const { records, isLoading, headers } = useSheetRecords();
 
   const stats = useMemo(() => {
     const result = {
@@ -14,36 +14,65 @@ export default function AnalyticsPage() {
       byGovernorate: {} as Record<string, number>,
       byStatus: {} as Record<string, number>,
       byLawyer: {} as Record<string, number>,
+      byCompany: {} as Record<string, number>,
       totalValue: 0,
+      availableFields: new Set<string>(),
     };
 
-    if (records) {
+    if (records && records.length > 0) {
+      // Log first record to see available fields
+      console.log('First record fields:', Object.keys(records[0]));
+      
       records.forEach((record) => {
+        // Track all available fields
+        Object.keys(record).forEach(key => result.availableFields.add(key));
+
         // Check multiple possible field names for governorate
-        const governorate = record['المحافظة'] || record['governorate'];
-        if (governorate) {
+        const governorate = record['المحافظة'] || record['governorate'] || record['محافظة'];
+        if (governorate && governorate.trim()) {
           result.byGovernorate[governorate] = (result.byGovernorate[governorate] || 0) + 1;
         }
 
+        // Company
+        const company = record['الشركة'] || record['company'];
+        if (company && company.trim()) {
+          result.byCompany[company] = (result.byCompany[company] || 0) + 1;
+        }
+
+        // Status/Archive
         const archived = record['أرشيف الدعاوي'] || record['archived'] || record['أرشيف'];
-        if (archived) {
+        if (archived && archived.trim()) {
           result.byStatus[archived] = (result.byStatus[archived] || 0) + 1;
         }
 
-        const lawyer = record['المحامي القائم بآخر تحديث'] || record['lastUpdateLawyer'];
-        if (lawyer) {
+        // Lawyer - check multiple possible fields
+        const lawyer = record['المحامي القائم بآخر تحديث'] || 
+                      record['lastUpdateLawyer'] ||
+                      record['محامي إعداد التقرير'] ||
+                      record['محامي حضور الجلسة'] ||
+                      record['محامي الاستخراج'];
+        if (lawyer && lawyer.trim()) {
           result.byLawyer[lawyer] = (result.byLawyer[lawyer] || 0) + 1;
         }
 
-        const docValue = record['قيمة السند'] || record['documentValue'];
+        // Document value
+        const docValue = record['قيمة السند'] || record['documentValue'] || record['قيمة المستند'];
         if (docValue) {
-          const value = parseFloat(docValue.toString().replace(/,/g, ""));
+          const value = parseFloat(docValue.toString().replace(/,/g, "").trim());
           if (!isNaN(value)) {
             result.totalValue += value;
           }
         }
       });
     }
+
+    console.log('Analytics stats:', {
+      total: result.total,
+      governoratesCount: Object.keys(result.byGovernorate).length,
+      lawyersCount: Object.keys(result.byLawyer).length,
+      companiesCount: Object.keys(result.byCompany).length,
+      availableFields: Array.from(result.availableFields)
+    });
 
     return result;
   }, [records]);
@@ -79,14 +108,14 @@ export default function AnalyticsPage() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">المحافظات</CardTitle>
+                  <CardTitle className="text-sm font-medium">الشركات</CardTitle>
                   <Scale className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-governorate-count">
-                    {Object.keys(stats.byGovernorate).length}
+                  <div className="text-2xl font-bold" data-testid="text-company-count">
+                    {Object.keys(stats.byCompany).length}
                   </div>
-                  <p className="text-xs text-muted-foreground">عدد المحافظات المختلفة</p>
+                  <p className="text-xs text-muted-foreground">عدد الشركات المختلفة</p>
                 </CardContent>
               </Card>
 
@@ -99,7 +128,9 @@ export default function AnalyticsPage() {
                   <div className="text-2xl font-bold" data-testid="text-lawyer-count">
                     {Object.keys(stats.byLawyer).length}
                   </div>
-                  <p className="text-xs text-muted-foreground">عدد المحامين العاملين</p>
+                  <p className="text-xs text-muted-foreground">
+                    {Object.keys(stats.byLawyer).length > 0 ? 'عدد المحامين العاملين' : 'لا توجد بيانات'}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -120,31 +151,37 @@ export default function AnalyticsPage() {
             <div className="grid gap-6 md:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>توزيع السجلات حسب المحافظة</CardTitle>
-                  <CardDescription>عدد السجلات في كل محافظة</CardDescription>
+                  <CardTitle>توزيع السجلات حسب الشركة</CardTitle>
+                  <CardDescription>عدد السجلات لكل شركة</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {Object.entries(stats.byGovernorate)
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 10)
-                      .map(([gov, count]) => (
-                        <div key={gov} className="flex items-center">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{gov}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-primary"
-                                style={{ width: `${(count / stats.total) * 100}%` }}
-                              />
+                  {Object.keys(stats.byCompany).length > 0 ? (
+                    <div className="space-y-4">
+                      {Object.entries(stats.byCompany)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 10)
+                        .map(([company, count]) => (
+                          <div key={company} className="flex items-center">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{company}</p>
                             </div>
-                            <span className="text-sm font-bold w-8 text-left">{count}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary"
+                                  style={{ width: `${(count / stats.total) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-bold w-8 text-left">{count}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                  </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      لا توجد بيانات متاحة
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -154,27 +191,33 @@ export default function AnalyticsPage() {
                   <CardDescription>عدد السجلات لكل محامي</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {Object.entries(stats.byLawyer)
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 10)
-                      .map(([lawyer, count]) => (
-                        <div key={lawyer} className="flex items-center">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{lawyer}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-primary"
-                                style={{ width: `${(count / stats.total) * 100}%` }}
-                              />
+                  {Object.keys(stats.byLawyer).length > 0 ? (
+                    <div className="space-y-4">
+                      {Object.entries(stats.byLawyer)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 10)
+                        .map(([lawyer, count]) => (
+                          <div key={lawyer} className="flex items-center">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{lawyer}</p>
                             </div>
-                            <span className="text-sm font-bold w-8 text-left">{count}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary"
+                                  style={{ width: `${(count / stats.total) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-bold w-8 text-left">{count}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                  </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      لا توجد بيانات عن المحامين في السجلات الحالية
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
