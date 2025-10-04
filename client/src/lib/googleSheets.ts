@@ -219,6 +219,7 @@ export async function logUpdateToSheet(
     action: 'logUpdate',
     spreadsheetId: sheetConfig.spreadsheetId,
     sheetName: sheetConfig.updatesSheetName,
+    sourceSheet: sheetConfig.sheetName,
     updateData: {
       serial: updateData.serial,
       updatedBy: updateData.updatedBy,
@@ -226,7 +227,6 @@ export async function logUpdateToSheet(
       fieldName: updateData.fieldName,
       oldValue: updateData.oldValue,
       newValue: updateData.newValue,
-      sourceSheet: sheetConfig.sheetName,
     },
   };
 
