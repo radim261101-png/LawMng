@@ -85,12 +85,13 @@ export default function SheetSelector() {
     setNewSheet({
       id: '',
       name: '',
-      spreadsheetId: '',
+      spreadsheetId: DEFAULT_SPREADSHEET_ID,
       sheetName: '',
       updatesSheetName: '',
     });
     setAvailableSheets([]);
     setHasLoadedSheets(false);
+    setIsOpen(false);
 
     toast({
       title: 'تم الإضافة بنجاح',
@@ -122,8 +123,36 @@ export default function SheetSelector() {
   };
 
   useEffect(() => {
-    if (isOpen && !hasLoadedSheets && DEFAULT_SPREADSHEET_ID) {
-      handleLoadSheets();
+    if (isOpen && DEFAULT_SPREADSHEET_ID) {
+      setNewSheet({
+        id: '',
+        name: '',
+        spreadsheetId: DEFAULT_SPREADSHEET_ID,
+        sheetName: '',
+        updatesSheetName: '',
+      });
+      setAvailableSheets([]);
+      setHasLoadedSheets(false);
+      
+      const loadSheets = async () => {
+        setIsLoadingSheets(true);
+        try {
+          const fetchedSheets = await fetchSpreadsheetSheets(DEFAULT_SPREADSHEET_ID);
+          setAvailableSheets(fetchedSheets);
+          setHasLoadedSheets(true);
+        } catch (error: any) {
+          toast({
+            title: 'خطأ في تحميل الشيتات',
+            description: error.message || 'تأكد من إضافة Google Sheets API Key',
+            variant: 'destructive',
+          });
+          setHasLoadedSheets(false);
+        } finally {
+          setIsLoadingSheets(false);
+        }
+      };
+      
+      loadSheets();
     }
   }, [isOpen]);
 
