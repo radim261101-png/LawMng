@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useSheets } from '@/contexts/SheetsContext';
+import { fetchSpreadsheetSheets, type SpreadsheetSheet } from '@/lib/googleSheets';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Sheet, Plus, Trash2, Check } from 'lucide-react';
+import { Sheet, Plus, Trash2, Check, Download, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function SheetSelector() {
@@ -18,7 +19,45 @@ export default function SheetSelector() {
     sheetName: '',
     updatesSheetName: '',
   });
+  const [availableSheets, setAvailableSheets] = useState<SpreadsheetSheet[]>([]);
+  const [isLoadingSheets, setIsLoadingSheets] = useState(false);
+  const [hasLoadedSheets, setHasLoadedSheets] = useState(false);
   const { toast } = useToast();
+
+  const handleLoadSheets = async () => {
+    if (!newSheet.spreadsheetId || !newSheet.spreadsheetId.trim()) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى إدخال معرف الـ Spreadsheet أولاً',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoadingSheets(true);
+    setHasLoadedSheets(false);
+    setAvailableSheets([]);
+
+    try {
+      const fetchedSheets = await fetchSpreadsheetSheets(newSheet.spreadsheetId);
+      setAvailableSheets(fetchedSheets);
+      setHasLoadedSheets(true);
+      
+      toast({
+        title: 'تم التحميل بنجاح',
+        description: `تم العثور على ${fetchedSheets.length} شيت`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'خطأ في تحميل الشيتات',
+        description: error.message || 'حدث خطأ غير متوقع',
+        variant: 'destructive',
+      });
+      setHasLoadedSheets(false);
+    } finally {
+      setIsLoadingSheets(false);
+    }
+  };
 
   const handleAddSheet = () => {
     if (!newSheet.id || !newSheet.name || !newSheet.spreadsheetId || !newSheet.sheetName) {
@@ -42,6 +81,8 @@ export default function SheetSelector() {
       sheetName: '',
       updatesSheetName: '',
     });
+    setAvailableSheets([]);
+    setHasLoadedSheets(false);
 
     toast({
       title: 'تم الإضافة بنجاح',
@@ -64,6 +105,12 @@ export default function SheetSelector() {
       title: 'تم الحذف',
       description: 'تم حذف الشيت',
     });
+  };
+
+  const handleSpreadsheetIdChange = (value: string) => {
+    setNewSheet({ ...newSheet, spreadsheetId: value });
+    setAvailableSheets([]);
+    setHasLoadedSheets(false);
   };
 
   return (
@@ -157,35 +204,103 @@ export default function SheetSelector() {
 
               <div>
                 <Label htmlFor="spreadsheetId">Spreadsheet ID *</Label>
-                <Input
-                  id="spreadsheetId"
-                  placeholder="من رابط Google Sheets"
-                  value={newSheet.spreadsheetId}
-                  onChange={(e) => setNewSheet({ ...newSheet, spreadsheetId: e.target.value })}
-                  data-testid="input-new-sheet-spreadsheet-id"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="spreadsheetId"
+                    placeholder="من رابط Google Sheets"
+                    value={newSheet.spreadsheetId}
+                    onChange={(e) => handleSpreadsheetIdChange(e.target.value)}
+                    data-testid="input-new-sheet-spreadsheet-id"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleLoadSheets}
+                    disabled={isLoadingSheets || !newSheet.spreadsheetId}
+                    data-testid="button-load-sheets"
+                  >
+                    {isLoadingSheets ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span className="mr-2">تحميل الشيتات</span>
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  اضغط "تحميل الشيتات" لجلب جميع الشيتات المتاحة في هذا الملف
+                </p>
               </div>
 
-              <div>
-                <Label htmlFor="sheetName">اسم الشيت في Google Sheets *</Label>
-                <Input
-                  id="sheetName"
-                  placeholder="مثال: Sheet1"
-                  value={newSheet.sheetName}
-                  onChange={(e) => setNewSheet({ ...newSheet, sheetName: e.target.value })}
-                  data-testid="input-new-sheet-sheet-name"
-                />
-              </div>
+              {hasLoadedSheets && availableSheets.length > 0 && (
+                <div>
+                  <Label htmlFor="sheetSelect">اختر الشيت من القائمة *</Label>
+                  <Select 
+                    value={newSheet.sheetName} 
+                    onValueChange={(value) => setNewSheet({ ...newSheet, sheetName: value })}
+                  >
+                    <SelectTrigger id="sheetSelect" data-testid="select-available-sheet">
+                      <SelectValue placeholder="اختر شيت..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSheets.map((sheet) => (
+                        <SelectItem key={sheet.sheetId} value={sheet.title}>
+                          {sheet.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    تم العثور على {availableSheets.length} شيت
+                  </p>
+                </div>
+              )}
+
+              {!hasLoadedSheets && (
+                <div>
+                  <Label htmlFor="sheetName">اسم الشيت في Google Sheets * (إدخال يدوي)</Label>
+                  <Input
+                    id="sheetName"
+                    placeholder="مثال: Sheet1"
+                    value={newSheet.sheetName}
+                    onChange={(e) => setNewSheet({ ...newSheet, sheetName: e.target.value })}
+                    data-testid="input-new-sheet-sheet-name"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    أو استخدم زر "تحميل الشيتات" للاختيار من القائمة
+                  </p>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="updatesSheetName">شيت سجل التعديلات (اختياري)</Label>
-                <Input
-                  id="updatesSheetName"
-                  placeholder="مثال: UpdatesLog"
-                  value={newSheet.updatesSheetName}
-                  onChange={(e) => setNewSheet({ ...newSheet, updatesSheetName: e.target.value })}
-                  data-testid="input-new-sheet-updates-name"
-                />
+                {hasLoadedSheets && availableSheets.length > 0 ? (
+                  <Select 
+                    value={newSheet.updatesSheetName} 
+                    onValueChange={(value) => setNewSheet({ ...newSheet, updatesSheetName: value })}
+                  >
+                    <SelectTrigger id="updatesSheetName" data-testid="select-updates-sheet">
+                      <SelectValue placeholder="اختر شيت سجل التعديلات..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">بدون</SelectItem>
+                      {availableSheets.map((sheet) => (
+                        <SelectItem key={`updates-${sheet.sheetId}`} value={sheet.title}>
+                          {sheet.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="updatesSheetName"
+                    placeholder="مثال: UpdatesLog"
+                    value={newSheet.updatesSheetName}
+                    onChange={(e) => setNewSheet({ ...newSheet, updatesSheetName: e.target.value })}
+                    data-testid="input-new-sheet-updates-name"
+                  />
+                )}
               </div>
 
               <Button 

@@ -8,6 +8,60 @@ export interface SheetRecord {
   [key: string]: any;
 }
 
+export interface SpreadsheetSheet {
+  title: string;
+  sheetId: number;
+  index: number;
+}
+
+export async function fetchSpreadsheetSheets(spreadsheetId: string): Promise<SpreadsheetSheet[]> {
+  const apiKey = getGoogleSheetsApiKey();
+  
+  if (!apiKey) {
+    throw new Error('لم يتم العثور على مفتاح Google Sheets API');
+  }
+
+  if (!spreadsheetId || !spreadsheetId.trim()) {
+    throw new Error('يرجى إدخال معرف الـ Spreadsheet');
+  }
+
+  try {
+    const response = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets(properties(title,sheetId,index))&key=${apiKey}`
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('الـ Spreadsheet غير موجود أو معرف خاطئ');
+      }
+      if (response.status === 403) {
+        throw new Error('ليس لديك صلاحية الوصول لهذا الـ Spreadsheet');
+      }
+      throw new Error(`خطأ في جلب الشيتات: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.sheets || data.sheets.length === 0) {
+      throw new Error('لا توجد شيتات في هذا الـ Spreadsheet');
+    }
+
+    return data.sheets
+      .map((sheet: any) => ({
+        title: sheet.properties.title,
+        sheetId: sheet.properties.sheetId,
+        index: sheet.properties.index,
+      }))
+      .sort((a: SpreadsheetSheet, b: SpreadsheetSheet) => a.index - b.index);
+  } catch (error: any) {
+    if (error.message) {
+      throw error;
+    }
+    console.error('Error fetching spreadsheet sheets:', error);
+    throw new Error('حدث خطأ أثناء جلب الشيتات من Google Sheets');
+  }
+}
+
 export async function fetchSheetData(
   sheetConfig: SheetConfig,
   sheetType: 'main' | 'updates' = 'main'
