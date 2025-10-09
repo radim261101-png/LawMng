@@ -20,26 +20,26 @@ function extractSpreadsheetId(input: string): string {
   }
 
   const trimmedInput = input.trim();
-  
+
   // Check if it's a full URL
   const urlPattern = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
   const match = trimmedInput.match(urlPattern);
-  
+
   if (match && match[1]) {
     return match[1];
   }
-  
+
   // If it's just an ID (no slashes or special characters)
   if (/^[a-zA-Z0-9-_]+$/.test(trimmedInput)) {
     return trimmedInput;
   }
-  
+
   throw new Error('الرجاء إدخال معرف Spreadsheet صحيح أو رابط Google Sheets كامل');
 }
 
 export async function fetchSpreadsheetSheets(spreadsheetId: string): Promise<SpreadsheetSheet[]> {
   const apiKey = getGoogleSheetsApiKey();
-  
+
   if (!apiKey) {
     throw new Error('لم يتم العثور على مفتاح Google Sheets API');
   }
@@ -62,7 +62,7 @@ export async function fetchSpreadsheetSheets(spreadsheetId: string): Promise<Spr
     }
 
     const data = await response.json();
-    
+
     if (!data.sheets || data.sheets.length === 0) {
       throw new Error('لا توجد شيتات في هذا الـ Spreadsheet');
     }
@@ -88,14 +88,14 @@ export async function fetchSheetData(
   sheetType: 'main' | 'updates' = 'main'
 ): Promise<any[][]> {
   const apiKey = getGoogleSheetsApiKey();
-  
+
   if (!apiKey) {
     console.warn('No Google Sheets API key found. Using demo data.');
     return sheetType === 'main' ? getDemoData() : [];
   }
 
-  const sheetName = sheetType === 'updates' && sheetConfig.updatesSheetName 
-    ? sheetConfig.updatesSheetName 
+  const sheetName = sheetType === 'updates' && sheetConfig.updatesSheetName
+    ? sheetConfig.updatesSheetName
     : sheetConfig.sheetName;
 
   try {
@@ -128,7 +128,7 @@ export async function getSheetHeaders(sheetConfig: SheetConfig): Promise<string[
 export async function getSheetRecords(sheetConfig: SheetConfig): Promise<any[]> {
   const data = await fetchSheetData(sheetConfig, 'main');
   if (data.length === 0) return [];
-  
+
   const headers = data[0];
   const records = [];
 
@@ -163,7 +163,7 @@ export async function updateSheetRow(
   values: any[]
 ): Promise<void> {
   const scriptUrl = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
-  
+
   if (!scriptUrl) {
     console.error('Google Apps Script URL not configured');
     throw new Error('لم يتم تكوين رابط Google Apps Script');
@@ -205,7 +205,7 @@ export async function logUpdateToSheet(
   }
 ): Promise<void> {
   const scriptUrl = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
-  
+
   if (!scriptUrl) {
     console.warn('Google Apps Script URL not configured - update not logged');
     return;
@@ -254,7 +254,7 @@ export async function getUpdatesLog(sheetConfig: SheetConfig): Promise<any[]> {
   try {
     const data = await fetchSheetData(sheetConfig, 'updates');
     if (data.length === 0) return [];
-    
+
     const headers = data[0];
     const updates = [];
 
