@@ -57,41 +57,44 @@ export function useSheetRecords() {
         }
       });
 
-      // البحث عن الرقم القومي في الـ record نفسه
+      // البحث عن الرقم القومي في الـ record
       let nationalId = '';
       
-      // جرب كل الاحتمالات الممكنة لاسم الحقل
-      const possibleNationalIdFields = [
-        'الرقم القومي',
-        'nationalId', 
-        'رقم قومي',
-        'National ID',
-        'NationalID'
-      ];
-      
-      for (const fieldName of possibleNationalIdFields) {
-        if (record[fieldName]) {
-          nationalId = record[fieldName].toString().trim();
-          break;
-        }
-      }
-
-      // لو مش لاقيه، جرب تدور في الـ headers
-      if (!nationalId) {
-        const nationalIdField = headers.find(h => 
-          h && (
-            h === 'الرقم القومي' || 
-            h === 'nationalId' || 
-            h.toLowerCase().includes('national') ||
-            h.includes('قومي')
-          )
+      // طريقة 1: البحث في كل الـ keys في الـ record مباشرة
+      const recordKeys = Object.keys(record);
+      const nationalIdKey = recordKeys.find(key => {
+        const normalizedKey = key.trim().toLowerCase();
+        return (
+          normalizedKey.includes('رقم') && normalizedKey.includes('قومي') ||
+          normalizedKey.includes('national') && normalizedKey.includes('id') ||
+          normalizedKey === 'nationalid'
         );
-        if (nationalIdField && record[nationalIdField]) {
-          nationalId = record[nationalIdField].toString().trim();
+      });
+
+      if (nationalIdKey && record[nationalIdKey]) {
+        nationalId = record[nationalIdKey].toString().trim();
+      }
+
+      // طريقة 2: لو مش لاقيه، دور في الـ headers
+      if (!nationalId) {
+        const nationalIdHeader = headers.find(h => {
+          if (!h) return false;
+          const normalized = h.trim().toLowerCase();
+          return (
+            normalized.includes('رقم') && normalized.includes('قومي') ||
+            normalized.includes('national') && normalized.includes('id') ||
+            normalized === 'nationalid'
+          );
+        });
+        
+        if (nationalIdHeader && record[nationalIdHeader]) {
+          nationalId = record[nationalIdHeader].toString().trim();
         }
       }
 
-      console.log('🆔 الرقم القومي اللي هيتبعت:', nationalId);
+      console.log('🔍 الـ record الكامل:', record);
+      console.log('📋 الـ headers:', headers);
+      console.log('🆔 الرقم القومي اللي اتلقى:', nationalId || 'مش موجود');
 
       const changePromises: Promise<void>[] = [];
       Object.keys(updates).forEach((key) => {
