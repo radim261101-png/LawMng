@@ -1,0 +1,90 @@
+serial	updatedBy	updatedAt	fieldName	oldValue	newValue	sourceSheet
+69	admin	2025-10-09T10:24:26.585Z	عدد المستندات المرفوع بها	"واحد 
+2
+3"	"واحد 
+2
+"	
+69	admin	2025-10-09T10:37:45.858Z	عدد المستندات المرفوع بها	"واحد 
+2
+"	"واحد 
+"	
+وده كود script google
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action;
+    
+    if (action === 'updateRow') {
+      return handleUpdateRow(data);
+    } else if (action === 'logUpdate') {
+      return handleLogUpdate(data);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'Unknown action'
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleUpdateRow(data) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = data.sheetName || 'Sheet1';
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    throw new Error('Sheet not found: ' + sheetName);
+  }
+  
+  const rowIndex = data.rowIndex;
+  const values = data.values;
+  
+  // Update the entire row
+  const range = sheet.getRange(rowIndex, 1, 1, values.length);
+  range.setValues([values]);
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    message: 'Row updated successfully'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleLogUpdate(data) {
+  const spreadsheet = SpreadsheetApp.openById(data.spreadsheetId);
+  const sheetName = data.sheetName || 'UpdatesLog';
+  let sheet = spreadsheet.getSheetByName(sheetName);
+  
+  // Create sheet if it doesn't exist
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(sheetName);
+    // Add headers
+    sheet.getRange(1, 1, 1, 7).setValues([[
+      'serial', 'updatedBy', 'updatedAt', 'fieldName', 'oldValue', 'newValue', 'sourceSheet'
+    ]]);
+  }
+  
+  const updateData = data.updateData;
+  const sourceSheet = data.sourceSheet || '';  // خد الـ sourceSheet من الـ root level
+  
+  // Append new row with update data
+  sheet.appendRow([
+    updateData.serial,
+    updateData.updatedBy,
+    updateData.updatedAt,
+    updateData.fieldName,
+    updateData.oldValue,
+    updateData.newValue,
+    sourceSheet  // استخدم القيمة من الـ root level
+  ]);
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    message: 'Update logged successfully'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
