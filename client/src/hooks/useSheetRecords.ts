@@ -57,10 +57,41 @@ export function useSheetRecords() {
         }
       });
 
-      const nationalIdField = headers.find(h => 
-        h === 'الرقم القومي' || h === 'nationalId' || h.toLowerCase().includes('national')
-      );
-      const nationalId = nationalIdField ? record[nationalIdField] : '';
+      // البحث عن الرقم القومي في الـ record نفسه
+      let nationalId = '';
+      
+      // جرب كل الاحتمالات الممكنة لاسم الحقل
+      const possibleNationalIdFields = [
+        'الرقم القومي',
+        'nationalId', 
+        'رقم قومي',
+        'National ID',
+        'NationalID'
+      ];
+      
+      for (const fieldName of possibleNationalIdFields) {
+        if (record[fieldName]) {
+          nationalId = record[fieldName].toString().trim();
+          break;
+        }
+      }
+
+      // لو مش لاقيه، جرب تدور في الـ headers
+      if (!nationalId) {
+        const nationalIdField = headers.find(h => 
+          h && (
+            h === 'الرقم القومي' || 
+            h === 'nationalId' || 
+            h.toLowerCase().includes('national') ||
+            h.includes('قومي')
+          )
+        );
+        if (nationalIdField && record[nationalIdField]) {
+          nationalId = record[nationalIdField].toString().trim();
+        }
+      }
+
+      console.log('🆔 الرقم القومي اللي هيتبعت:', nationalId);
 
       const changePromises: Promise<void>[] = [];
       Object.keys(updates).forEach((key) => {
@@ -71,7 +102,7 @@ export function useSheetRecords() {
           changePromises.push(
             logUpdateToSheet(activeSheet, {
               serial: record.serial,
-              nationalId: nationalId,
+              nationalId: nationalId || '',
               updatedBy: user?.username || 'unknown',
               updatedAt: new Date().toISOString(),
               fieldName: key,
