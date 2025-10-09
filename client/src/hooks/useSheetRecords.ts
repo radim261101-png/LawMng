@@ -93,17 +93,28 @@ export function useSheetRecords() {
         rowData[0] = record.serial.toString();
       }
 
+      setRecords(prevRecords => 
+        prevRecords.map(r => 
+          r.id === record.id 
+            ? { ...r, ...updates }
+            : r
+        )
+      );
+
       await updateSheetRow(activeSheet, record.rowIndex, rowData);
       
       await Promise.all(changePromises);
       
-      await fetchRecords();
+      setTimeout(() => {
+        fetchRecords();
+      }, 1000);
       
       toast({
         title: 'تم التحديث بنجاح',
-        description: 'تم حفظ التعديلات على السجل وتسجيلها في سجل التعديلات',
+        description: 'تم حفظ التعديلات على السجل',
       });
     } catch (err: any) {
+      await fetchRecords();
       toast({
         title: 'خطأ في التحديث',
         description: err.message || 'حدث خطأ أثناء تحديث السجل',

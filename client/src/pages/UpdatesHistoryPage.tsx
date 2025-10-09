@@ -135,15 +135,20 @@ export default function UpdatesHistoryPage() {
             ) : (
               <>
                 <div className="space-y-4">
-                  {paginatedUpdates.map((update, index) => (
+                  {paginatedUpdates.map((update, index) => {
+                    // محاولة الحصول على الرقم القومي من مصادر مختلفة
+                    const nationalId = update.nationalId || update['الرقم القومي'] || null;
+                    const serial = update.serial || update['م'] || 'غير محدد';
+                    
+                    return (
                     <Card key={update.id || index} data-testid={`update-card-${index}`}>
                       <CardHeader className="pb-3">
                         <div className="flex justify-between items-start">
                           <div>
                             <CardTitle className="text-base">
-                              {update.nationalId || update['الرقم القومي'] 
-                                ? `الرقم القومي: ${update.nationalId || update['الرقم القومي']}`
-                                : `سجل رقم: ${update.serial || update['م'] || 'غير محدد'}`}
+                              {nationalId 
+                                ? `الرقم القومي: ${nationalId}`
+                                : `سجل رقم: ${serial}`}
                             </CardTitle>
                             <CardDescription className="mt-1">
                               بواسطة: {update.updatedBy || update['المستخدم'] || 'غير معروف'} •{' '}
@@ -177,7 +182,8 @@ export default function UpdatesHistoryPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <RecordsPagination

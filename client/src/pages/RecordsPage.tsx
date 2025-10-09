@@ -15,7 +15,7 @@ import { RecordsPagination } from "@/components/RecordsPagination";
 import { exportToExcel } from "@/lib/excelExport";
 import { useToast } from "@/hooks/use-toast";
 import type { SheetRecord } from "@/hooks/useSheetRecords";
-import { ColumnFilter } from "@/components/ColumnFilter";
+import { AdvancedFilters } from "@/components/AdvancedFilters";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -359,21 +359,13 @@ export default function RecordsPage() {
               </Button>
             </div>
           </div>
-          {hasActiveFilters && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">الفلاتر النشطة:</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearAllFilters}
-                className="gap-2"
-                data-testid="button-clear-all-filters"
-              >
-                <X className="w-3 h-3" />
-                مسح كل الفلاتر
-              </Button>
-            </div>
-          )}
+          <AdvancedFilters
+            headers={editableHeaders}
+            records={records || []}
+            columnFilters={columnFilters}
+            onFilterChange={handleColumnFilterChange}
+            onClearAll={handleClearAllFilters}
+          />
           {selectedRecords.size > 0 && (
             <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
               <span className="text-sm font-medium">تم تحديد {selectedRecords.size} سجل</span>
@@ -423,17 +415,7 @@ export default function RecordsPage() {
                       </TableHead>
                       {headers.slice(0, 8).map((header, index) => (
                         <TableHead key={index} className="text-right font-semibold whitespace-nowrap">
-                          <div className="flex items-center gap-1">
-                            <span>{header || `-`}</span>
-                            {header && records && records.length > 0 && (
-                              <ColumnFilter
-                                columnName={header}
-                                allValues={records.map(r => r[header])}
-                                selectedValues={columnFilters[header] || new Set()}
-                                onFilterChange={(values) => handleColumnFilterChange(header, values)}
-                              />
-                            )}
-                          </div>
+                          {header || `-`}
                         </TableHead>
                       ))}
                       <TableHead className="text-center font-semibold">الإجراءات</TableHead>

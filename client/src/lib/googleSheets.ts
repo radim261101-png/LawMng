@@ -275,10 +275,11 @@ export async function getUpdatesLog(sheetConfig: SheetConfig): Promise<any[]> {
       updates.push(update);
     }
 
-    // فلترة التعديلات بناءً على الشيت المصدر
+    // فلترة التعديلات بناءً على الشيت المصدر - يجب أن يطابق الشيت الحالي فقط
     const filteredUpdates = updates.filter(update => {
-      const sourceSheet = update.sourceSheet || update['الشيت المصدر'] || update['sourceSheet'];
-      return !sourceSheet || sourceSheet === sheetConfig.sheetName;
+      const sourceSheet = update.sourceSheet || update['الشيت المصدر'];
+      // عرض التعديلات فقط إذا كان sourceSheet يطابق الشيت الحالي
+      return sourceSheet === sheetConfig.sheetName;
     });
 
     return filteredUpdates.reverse();
