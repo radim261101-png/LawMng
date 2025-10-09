@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, Search, Download, X, Edit2 } from "lucide-react";
+import { Pencil, Search, Download, X, Edit2, FolderOpen } from "lucide-react";
+import { DriveFileManager } from "@/components/DriveFileManager";
 import { RecordsPagination } from "@/components/RecordsPagination";
 import { exportToExcel } from "@/lib/excelExport";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +50,8 @@ export default function RecordsPage() {
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
   const [bulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
   const [bulkEditData, setBulkEditData] = useState<Record<string, any>>({});
+  const [driveManagerOpen, setDriveManagerOpen] = useState(false);
+  const [selectedRecordForDrive, setSelectedRecordForDrive] = useState<SheetRecord | null>(null);
 
   const editableHeaders = useMemo(() => {
     return headers.slice(1).filter(h => h && h.trim());
@@ -217,6 +220,25 @@ export default function RecordsPage() {
     setBulkEditData({});
     setBulkEditDialogOpen(true);
   }, []);
+
+  const handleOpenDriveManager = useCallback((record: SheetRecord) => {
+    setSelectedRecordForDrive(record);
+    setDriveManagerOpen(true);
+  }, []);
+
+  const handleDriveFolderCreated = useCallback(async (recordId: string, folderId: string, folderLink: string) => {
+    const record = records?.find(r => r.id === recordId);
+    if (!record) return;
+
+    try {
+      await updateRecord(record, {
+        driveFolderId: folderId,
+        driveFolderLink: folderLink,
+      });
+    } catch (error) {
+      console.error('Error updating drive folder info:', error);
+    }
+  }, [records, updateRecord]);
 
   const handleBulkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -497,14 +519,25 @@ export default function RecordsPage() {
                             </TableCell>
                           ))}
                           <TableCell className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(record)}
-                              data-testid={`button-edit-${record.serial}`}
-                            >
-                              <Pencil className="w-4 h-4 text-primary" />
-                            </Button>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(record)}
+                                data-testid={`button-edit-${record.serial}`}
+                              >
+                                <Pencil className="w-4 h-4 text-primary" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenDriveManager(record)}
+                                data-testid={`button-drive-${record.serial}`}
+                                title="إدارة الملفات"
+                              >
+                                <FolderOpen className="w-4 h-4 text-blue-600" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -565,6 +598,19 @@ export default function RecordsPage() {
             </form>
           </DialogContent>
         </Dialog>
+      )}
+
+      {selectedRecordForDrive && (
+        <DriveFileManager
+          open={driveManagerOpen}
+          onOpenChange={setDriveManagerOpen}
+          nationalId={selectedRecordForDrive['الرقم القومى'] || selectedRecordForDrive.serial}
+          folderId={selectedRecordForDrive.driveFolderId}
+          folderLink={selectedRecordForDrive.driveFolderLink}
+          onFolderCreated={(folderId, folderLink) => 
+            handleDriveFolderCreated(selectedRecordForDrive.id, folderId, folderLink)
+          }
+        />
       )}
 
       {bulkEditDialogOpen && (
