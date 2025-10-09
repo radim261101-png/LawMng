@@ -1,150 +1,202 @@
+import { google } from 'googleapis';
 
-const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
-const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+// Removed DISCOVERY_DOCS and SCOPES as they are no longer used for client-side OAuth.
+// Removed tokenClient, accessToken, initGoogleDrive, authenticateGoogleDrive, signOutGoogleDrive
+// as the authentication will be handled by the backend service account.
 
-let tokenClient: any = null;
-let accessToken: string | null = null;
-
-export function initGoogleDrive() {
-  const clientId = import.meta.env.VITE_GOOGLE_DRIVE_CLIENT_ID;
-  
-  if (!clientId) {
-    throw new Error('VITE_GOOGLE_DRIVE_CLIENT_ID غير موجود');
-  }
-
-  // Load Google Identity Services
-  if (typeof google !== 'undefined' && google.accounts) {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: SCOPES,
-      callback: '', // Will be set later
-    });
-  }
-}
-
-export function authenticateGoogleDrive(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!tokenClient) {
-      reject(new Error('Google Drive client not initialized'));
-      return;
-    }
-
-    tokenClient.callback = (response: any) => {
-      if (response.error) {
-        reject(response);
-        return;
-      }
-      accessToken = response.access_token;
-      localStorage.setItem('google_drive_token', accessToken);
-      resolve(accessToken);
-    };
-
-    // Check if we have a stored token
-    const storedToken = localStorage.getItem('google_drive_token');
-    if (storedToken) {
-      accessToken = storedToken;
-      resolve(storedToken);
-    } else {
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-    }
-  });
-}
-
-export async function createFolder(folderName: string): Promise<{ id: string; webViewLink: string }> {
-  if (!accessToken) {
-    await authenticateGoogleDrive();
-  }
-
-  const metadata = {
-    name: folderName,
-    mimeType: 'application/vnd.google-apps.folder',
-  };
-
-  const response = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,webViewLink', {
+/**
+ * Creates a new folder in Google Drive.
+ * @param folderName The name of the folder to create.
+ * @param parentFolderId The ID of the parent folder. If not provided, it will be created in the root.
+ * @returns A promise that resolves with the created folder's ID and webViewLink.
+ */
+export async function createFolder(folderName: string, parentFolderId?: string): Promise<{ id: string; webViewLink: string }> {
+  const response = await fetch('/api/drive/create-folder', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(metadata),
+    body: JSON.stringify({ folderName, parentFolderId }),
   });
 
   if (!response.ok) {
-    throw new Error('Failed to create folder');
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create folder');
   }
 
   return await response.json();
 }
 
+/**
+ * Uploads a file to a specified folder in Google Drive.
+ * @param file The file to upload.
+ * @param folderId The ID of the folder to upload the file to.
+ * @returns A promise that resolves with the uploaded file's ID, name, and webViewLink.
+ */
 export async function uploadFile(file: File, folderId: string): Promise<{ id: string; name: string; webViewLink: string }> {
-  if (!accessToken) {
-    await authenticateGoogleDrive();
-  }
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folderId', folderId);
 
-  const metadata = {
-    name: file.name,
-    parents: [folderId],
-  };
-
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', file);
-
-  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+  const response = await fetch('/api/drive/upload', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-    body: form,
+    body: formData,
   });
 
   if (!response.ok) {
-    throw new Error('Failed to upload file');
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to upload file');
   }
 
   return await response.json();
 }
 
+/**
+ * Lists files in a specified folder in Google Drive.
+ * @param folderId The ID of the folder to list files from.
+ * @returns A promise that resolves with an array of files.
+ */
 export async function listFiles(folderId: string): Promise<any[]> {
-  if (!accessToken) {
-    await authenticateGoogleDrive();
-  }
-
-  const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&fields=files(id,name,webViewLink,mimeType,createdTime)`,
-    {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    }
-  );
+  const response = await fetch(`/api/drive/list?folderId=${folderId}`);
 
   if (!response.ok) {
-    throw new Error('Failed to list files');
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to list files');
   }
 
   const data = await response.json();
   return data.files || [];
 }
 
+/**
+ * Deletes a file from Google Drive.
+ * @param fileId The ID of the file to delete.
+ * @returns A promise that resolves when the file is deleted.
+ */
 export async function deleteFile(fileId: string): Promise<void> {
-  if (!accessToken) {
-    await authenticateGoogleDrive();
-  }
-
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+  const response = await fetch(`/api/drive/delete/${fileId}`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to delete file');
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete file');
   }
 }
 
-export function signOutGoogleDrive() {
-  accessToken = null;
-  localStorage.removeItem('google_drive_token');
+/**
+ * Gets the ID of the root folder in Google Drive.
+ * @returns A promise that resolves with the root folder ID.
+ */
+export async function getRootFolderId(): Promise<string> {
+  const response = await fetch('/api/drive/root-folder');
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get root folder');
+  }
+
+  const data = await response.json();
+  return data.folderId;
+}
+```import { google } from 'googleapis';
+
+// Removed DISCOVERY_DOCS and SCOPES as they are no longer used for client-side OAuth.
+// Removed tokenClient, accessToken, initGoogleDrive, authenticateGoogleDrive, signOutGoogleDrive
+// as the authentication will be handled by the backend service account.
+
+/**
+ * Creates a new folder in Google Drive.
+ * @param folderName The name of the folder to create.
+ * @param parentFolderId The ID of the parent folder. If not provided, it will be created in the root.
+ * @returns A promise that resolves with the created folder's ID and webViewLink.
+ */
+export async function createFolder(folderName: string, parentFolderId?: string): Promise<{ id: string; webViewLink: string }> {
+  const response = await fetch('/api/drive/create-folder', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ folderName, parentFolderId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create folder');
+  }
+
+  return await response.json();
+}
+
+/**
+ * Uploads a file to a specified folder in Google Drive.
+ * @param file The file to upload.
+ * @param folderId The ID of the folder to upload the file to.
+ * @returns A promise that resolves with the uploaded file's ID, name, and webViewLink.
+ */
+export async function uploadFile(file: File, folderId: string): Promise<{ id: string; name: string; webViewLink: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folderId', folderId);
+
+  const response = await fetch('/api/drive/upload', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to upload file');
+  }
+
+  return await response.json();
+}
+
+/**
+ * Lists files in a specified folder in Google Drive.
+ * @param folderId The ID of the folder to list files from.
+ * @returns A promise that resolves with an array of files.
+ */
+export async function listFiles(folderId: string): Promise<any[]> {
+  const response = await fetch(`/api/drive/list?folderId=${folderId}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to list files');
+  }
+
+  const data = await response.json();
+  return data.files || [];
+}
+
+/**
+ * Deletes a file from Google Drive.
+ * @param fileId The ID of the file to delete.
+ * @returns A promise that resolves when the file is deleted.
+ */
+export async function deleteFile(fileId: string): Promise<void> {
+  const response = await fetch(`/api/drive/delete/${fileId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete file');
+  }
+}
+
+/**
+ * Gets the ID of the root folder in Google Drive.
+ * @returns A promise that resolves with the root folder ID.
+ */
+export async function getRootFolderId(): Promise<string> {
+  const response = await fetch('/api/drive/root-folder');
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get root folder');
+  }
+
+  const data = await response.json();
+  return data.folderId;
 }

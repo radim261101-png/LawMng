@@ -1,7 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { updateGoogleSheet, getUpdatesHistory } from "./googleSheets";
 import { storage } from "./storage";
-import { updateValuRecordSchema, EDITABLE_FIELDS } from "@shared/schema";
+import type { Record as RecordType } from "@db/schema";
+import { db } from "../db";
+import { records } from "@db/schema";
+import multer from 'multer';
+import * as driveService from './googleDrive';
 import session from "express-session";
 
 declare module "express-session" {
@@ -29,13 +34,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
-      
+
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password required" });
       }
 
       const user = await storage.getUserByUsername(username);
-      
+
       if (!user || user.password !== password) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
@@ -113,26 +118,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const username = req.session.username!;
       const role = req.session.role!;
-      
+
       const record = await storage.getRecordById(req.params.id);
       if (!record) {
         return res.status(404).json({ message: "Record not found" });
       }
 
       const validatedData = updateValuRecordSchema.parse(req.body);
-      
+
       if (role !== "admin") {
         const filteredData: Partial<typeof validatedData> = {};
-        
+
         Object.keys(validatedData).forEach((key) => {
           const fieldKey = key as keyof typeof validatedData;
           const newValue = validatedData[fieldKey];
           const oldValue = record[fieldKey];
-          
+
           if (!EDITABLE_FIELDS.includes(fieldKey as any)) {
             return;
           }
-          
+
           if (newValue && typeof newValue === 'string' && newValue.trim()) {
             if (oldValue && typeof oldValue === 'string' && oldValue.trim()) {
               filteredData[fieldKey] = `${oldValue}\n${newValue}` as any;
@@ -141,11 +146,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         });
-        
+
         const updatedRecord = await storage.updateRecord(req.params.id, filteredData, username);
         return res.json(updatedRecord);
       }
-      
+
       const updatedRecord = await storage.updateRecord(req.params.id, validatedData, username);
       return res.json(updatedRecord);
     } catch (error: any) {
@@ -181,6 +186,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(updates);
     } catch (error) {
       return res.status(500).json({ message: "Failed to fetch all updates" });
+    }
+  });
+
+  // Get update history
+  app.get("/api/updates-history", async (_req, res) => {
+    try {
+      const history = await getUpdatesHistory();
+      res.json(history);
+    } catch (error: any) {
+      console.error("Error fetching updates history:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Google Drive endpoints
+  const upload = multer({ storage: multer.memoryStorage() });
+
+  app.post("/api/drive/create-folder", async (req, res) => {
+    try {
+      const { folderName, parentFolderId } = req.body;
+      const folder = await driveService.createFolder(folderName, parentFolderId);
+      res.json(folder);
+    } catch (error: any) {
+      console.error("Error creating folder:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/drive/upload", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const { folderId } = req.body;
+      const result = await driveService.uploadFile(req.file, folderId);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/drive/list", async (req, res) => {
+    try {
+      const { folderId } = req.query;
+      const files = await driveService.listFiles(folderId as string);
+      res.json({ files });
+    } catch (error: any) {
+      console.error("Error listing files:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/drive/delete/:fileId", async (req, res) => {
+    try {
+      const { fileId } = req.params;
+      await driveService.deleteFile(fileId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting file:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/drive/root-folder", async (_req, res) => {
+    try {
+      const folderId = await driveService.getRootFolderId();
+      res.json({ folderId });
+    } catch (error: any) {
+      console.error("Error getting root folder:", error);
+      res.status(500).json({ message: error.message });
     }
   });
 

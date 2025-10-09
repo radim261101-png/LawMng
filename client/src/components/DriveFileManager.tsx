@@ -47,8 +47,6 @@ export function DriveFileManager({
   const handleAuthenticate = async () => {
     setIsAuthenticating(true);
     try {
-      await authenticateGoogleDrive();
-      
       // Create folder if doesn't exist
       if (!folderId) {
         const folder = await createFolder(`رقم قومي - ${nationalId}`);
@@ -65,7 +63,7 @@ export function DriveFileManager({
       await loadFiles();
     } catch (error: any) {
       toast({
-        title: 'خطأ في المصادقة',
+        title: 'خطأ في إنشاء المجلد',
         description: error.message || 'حدث خطأ أثناء الاتصال بـ Google Drive',
         variant: 'destructive',
       });
