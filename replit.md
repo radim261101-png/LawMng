@@ -56,6 +56,12 @@ Authentication is handled via localStorage with predefined credentials (admin/ad
 - **Memoization**: useMemo and useCallback hooks for optimized rendering and function references
 - **Smart Filtering**: Filtered data is computed only when search term or records change
 
+### Key Features (October 2025)
+- **Enhanced Update Logs**: Update logs now include National ID alongside serial numbers for better record identification
+- **Excel-like Column Filtering**: Advanced filtering system allowing users to filter records by any column with dropdown menus showing unique values
+- **Bulk Selection & Editing**: Multi-select capability with checkboxes to select multiple records and apply bulk edits simultaneously
+- **Smart Filter Management**: Combined column filters work alongside global search with clear visual indicators of active filters
+
 ### Key Integrations
 - Google Sheets API v4: Primary data source for reading and writing.
 - Google Apps Script: Used for specific write operations to Google Sheets.
