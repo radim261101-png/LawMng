@@ -16,6 +16,7 @@ import { exportToExcel } from "@/lib/excelExport";
 import { useToast } from "@/hooks/use-toast";
 import type { SheetRecord } from "@/hooks/useSheetRecords";
 import { AdvancedFilters } from "@/components/AdvancedFilters";
+import { ExportMenu } from "@/components/ExportMenu";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -180,6 +181,17 @@ export default function RecordsPage() {
     return Object.values(columnFilters).some(filter => filter && filter.size > 0) || !!searchTerm;
   }, [columnFilters, searchTerm]);
 
+  const todayModifiedRecords = useMemo(() => {
+    if (!records) return [];
+    const today = new Date().toISOString().split('T')[0];
+    return records.filter(record => {
+      const lastModified = record.lastModifiedDate;
+      if (!lastModified) return false;
+      const modifiedDate = lastModified.split('T')[0];
+      return modifiedDate === today;
+    });
+  }, [records]);
+
   const handleSelectAll = useCallback((checked: boolean) => {
     if (checked) {
       const allIds = new Set(paginatedRecords.map(r => r.id));
@@ -258,16 +270,16 @@ export default function RecordsPage() {
     }
   };
 
-  const handleExport = useCallback(() => {
+  const handleExportAll = useCallback(() => {
     try {
       exportToExcel({
         headers,
-        records: filteredRecords,
-        fileName: searchTerm ? 'filtered_records' : 'all_records'
+        records: records || [],
+        fileName: 'all_records'
       });
       toast({
         title: 'تم التصدير بنجاح',
-        description: 'تم تحميل ملف Excel بنجاح',
+        description: `تم تصدير ${records?.length || 0} سجل بنجاح`,
       });
     } catch (error: any) {
       toast({
@@ -276,7 +288,47 @@ export default function RecordsPage() {
         variant: 'destructive',
       });
     }
-  }, [headers, filteredRecords, searchTerm, toast]);
+  }, [headers, records, toast]);
+
+  const handleExportFiltered = useCallback(() => {
+    try {
+      exportToExcel({
+        headers,
+        records: filteredRecords,
+        fileName: 'filtered_records'
+      });
+      toast({
+        title: 'تم التصدير بنجاح',
+        description: `تم تصدير ${filteredRecords.length} سجل مفلتر بنجاح`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'خطأ في التصدير',
+        description: error.message || 'حدث خطأ أثناء تصدير البيانات',
+        variant: 'destructive',
+      });
+    }
+  }, [headers, filteredRecords, toast]);
+
+  const handleExportToday = useCallback(() => {
+    try {
+      exportToExcel({
+        headers,
+        records: todayModifiedRecords,
+        fileName: 'today_modified_records'
+      });
+      toast({
+        title: 'تم التصدير بنجاح',
+        description: `تم تصدير ${todayModifiedRecords.length} سجل معدل اليوم بنجاح`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'خطأ في التصدير',
+        description: error.message || 'حدث خطأ أثناء تصدير البيانات',
+        variant: 'destructive',
+      });
+    }
+  }, [headers, todayModifiedRecords, toast]);
 
   const renderField = useCallback((fieldName: string) => {
     const isAdmin = user?.role === "admin";
@@ -348,15 +400,16 @@ export default function RecordsPage() {
                   {filteredRecords.length} نتيجة
                 </span>
               )}
-              <Button
-                onClick={handleExport}
-                disabled={!filteredRecords.length || isLoading}
-                variant="outline"
-                data-testid="button-export-excel"
-              >
-                <Download className="w-4 h-4 ml-2" />
-                تصدير لـ Excel
-              </Button>
+              <ExportMenu
+                onExportAll={handleExportAll}
+                onExportFiltered={handleExportFiltered}
+                onExportToday={handleExportToday}
+                isLoading={isLoading}
+                hasFilters={hasActiveFilters}
+                todayCount={todayModifiedRecords.length}
+                filteredCount={filteredRecords.length}
+                totalCount={records?.length || 0}
+              />
             </div>
           </div>
           <AdvancedFilters
