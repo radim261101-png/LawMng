@@ -196,6 +196,7 @@ export async function logUpdateToSheet(
   sheetConfig: SheetConfig,
   updateData: {
     serial: number;
+    nationalId?: string;
     updatedBy: string;
     updatedAt: string;
     fieldName: string;
@@ -222,6 +223,7 @@ export async function logUpdateToSheet(
     sourceSheet: sheetConfig.sheetName,
     updateData: {
       serial: updateData.serial,
+      nationalId: updateData.nationalId || '',
       updatedBy: updateData.updatedBy,
       updatedAt: updateData.updatedAt,
       fieldName: updateData.fieldName,

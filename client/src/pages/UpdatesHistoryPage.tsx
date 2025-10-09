@@ -141,7 +141,9 @@ export default function UpdatesHistoryPage() {
                         <div className="flex justify-between items-start">
                           <div>
                             <CardTitle className="text-base">
-                              سجل رقم: {update.serial || update['م'] || 'غير محدد'}
+                              {update.nationalId || update['الرقم القومي'] 
+                                ? `الرقم القومي: ${update.nationalId || update['الرقم القومي']}`
+                                : `سجل رقم: ${update.serial || update['م'] || 'غير محدد'}`}
                             </CardTitle>
                             <CardDescription className="mt-1">
                               بواسطة: {update.updatedBy || update['المستخدم'] || 'غير معروف'} •{' '}

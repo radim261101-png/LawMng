@@ -57,6 +57,11 @@ export function useSheetRecords() {
         }
       });
 
+      const nationalIdField = headers.find(h => 
+        h === 'الرقم القومي' || h === 'nationalId' || h.toLowerCase().includes('national')
+      );
+      const nationalId = nationalIdField ? record[nationalIdField] : '';
+
       const changePromises: Promise<void>[] = [];
       Object.keys(updates).forEach((key) => {
         const oldValue = record[key] || '';
@@ -66,6 +71,7 @@ export function useSheetRecords() {
           changePromises.push(
             logUpdateToSheet(activeSheet, {
               serial: record.serial,
+              nationalId: nationalId,
               updatedBy: user?.username || 'unknown',
               updatedAt: new Date().toISOString(),
               fieldName: key,
