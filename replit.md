@@ -57,10 +57,18 @@ Authentication is handled via localStorage with predefined credentials (admin/ad
 - **Smart Filtering**: Filtered data is computed only when search term or records change
 
 ### Key Features (October 2025)
-- **Enhanced Update Logs**: Update logs now include National ID alongside serial numbers for better record identification
-- **Excel-like Column Filtering**: Advanced filtering system allowing users to filter records by any column with dropdown menus showing unique values
+- **Enhanced Update Logs**: Update logs now include National ID alongside serial numbers for better record identification. The system automatically detects and displays the National ID from both Arabic (الرقم القومي) and English (nationalId) field names.
+- **Advanced Filtering System**: New popover-based filtering system located above the table that allows users to:
+  - Select any column from a dropdown menu
+  - Filter by multiple values using checkboxes
+  - Search within filter values
+  - View active filters as badges with quick removal
+  - Combine column filters with global search
 - **Bulk Selection & Editing**: Multi-select capability with checkboxes to select multiple records and apply bulk edits simultaneously
-- **Smart Filter Management**: Combined column filters work alongside global search with clear visual indicators of active filters
+- **Optimized Performance**: 
+  - Optimistic UI updates: Records update instantly in the interface before syncing with Google Sheets
+  - Deferred data refresh: Full data reload happens 1 second after edit instead of immediately
+  - Improved perceived responsiveness for better user experience
 
 ### Key Integrations
 - Google Sheets API v4: Primary data source for reading and writing.
