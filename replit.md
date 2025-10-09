@@ -58,12 +58,20 @@ Authentication is handled via localStorage with predefined credentials (admin/ad
 
 ### Key Features (October 2025)
 - **Enhanced Update Logs**: Update logs now include National ID alongside serial numbers for better record identification. The system automatically detects and displays the National ID from both Arabic (الرقم القومي) and English (nationalId) field names.
-- **Advanced Filtering System**: New popover-based filtering system located above the table that allows users to:
-  - Select any column from a dropdown menu
-  - Filter by multiple values using checkboxes
-  - Search within filter values
+- **Advanced Filtering System (Enhanced October 9, 2025)**: Improved popover-based filtering system with two modes:
+  - **Single Column Mode**: Traditional filtering for one column at a time with search capability
+  - **Multiple Columns Mode**: NEW - Filter multiple columns simultaneously with:
+    - Individual search boxes for each column
+    - Visual counters showing selected/total values per column
+    - Quick select-all and clear actions per column
+    - Scroll view for easy navigation through all columns
   - View active filters as badges with quick removal
   - Combine column filters with global search
+- **Multi-Option Excel Export (New October 9, 2025)**: Advanced export menu with three options:
+  - **Export All Records**: Export complete dataset regardless of filters
+  - **Export Filtered Records**: Export only records matching current filters
+  - **Export Today's Modified Records**: Export only records modified today based on lastModifiedDate field
+  - Each option shows record count for transparency
 - **Bulk Selection & Editing**: Multi-select capability with checkboxes to select multiple records and apply bulk edits simultaneously
 - **Optimized Performance**: 
   - Optimistic UI updates: Records update instantly in the interface before syncing with Google Sheets
