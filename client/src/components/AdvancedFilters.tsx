@@ -2,22 +2,14 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { X, Filter, Plus, ChevronDown } from 'lucide-react';
+import { X, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface AdvancedFiltersProps {
   headers: string[];
@@ -34,32 +26,26 @@ export function AdvancedFilters({
   onFilterChange,
   onClearAll,
 }: AdvancedFiltersProps) {
-  const [selectedColumn, setSelectedColumn] = useState<string>('');
-  const [searchValue, setSearchValue] = useState('');
   const [searchByColumn, setSearchByColumn] = useState<Record<string, string>>({});
+  const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set());
+  const [columnSearch, setColumnSearch] = useState('');
 
   const availableHeaders = useMemo(() => {
     return headers.filter(h => h && h.trim());
   }, [headers]);
 
-  const uniqueValues = useMemo(() => {
-    if (!selectedColumn || !records) return [];
-    const values = new Set<string>();
-    records.forEach(record => {
-      const value = record[selectedColumn];
-      if (value !== null && value !== undefined && value !== '') {
-        values.add(String(value));
-      }
-    });
-    return Array.from(values).sort();
-  }, [selectedColumn, records]);
-
-  const filteredValues = useMemo(() => {
-    const columnSearch = selectedColumn ? searchByColumn[selectedColumn] || '' : searchValue;
-    if (!columnSearch.trim()) return uniqueValues;
+  const filteredHeaders = useMemo(() => {
+    if (!columnSearch.trim()) return availableHeaders;
     const search = columnSearch.toLowerCase();
-    return uniqueValues.filter(v => v.toLowerCase().includes(search));
-  }, [uniqueValues, searchValue, searchByColumn, selectedColumn]);
+    const matching = availableHeaders.filter(h => h.toLowerCase().includes(search));
+    
+    const withActiveFilters = availableHeaders.filter(h => {
+      const filter = columnFilters[h];
+      return filter && filter.size > 0 && !matching.includes(h);
+    });
+    
+    return [...withActiveFilters, ...matching];
+  }, [availableHeaders, columnSearch, columnFilters]);
 
   const activeFiltersCount = useMemo(() => {
     return Object.values(columnFilters).reduce((count, filter) => 
@@ -67,47 +53,18 @@ export function AdvancedFilters({
     );
   }, [columnFilters]);
 
-  const handleToggleValue = (value: string) => {
-    if (!selectedColumn) return;
-    const currentFilter = columnFilters[selectedColumn] || new Set();
-    const newFilter = new Set(currentFilter);
-    
-    if (newFilter.has(value)) {
-      newFilter.delete(value);
-    } else {
-      newFilter.add(value);
-    }
-    
-    onFilterChange(selectedColumn, newFilter);
+  const toggleColumn = (column: string) => {
+    setExpandedColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(column)) {
+        newSet.delete(column);
+      } else {
+        newSet.add(column);
+      }
+      return newSet;
+    });
   };
 
-  const handleSelectAll = () => {
-    if (!selectedColumn) return;
-    const allValues = new Set(uniqueValues);
-    onFilterChange(selectedColumn, allValues);
-  };
-
-  const handleClearColumn = () => {
-    if (!selectedColumn) return;
-    onFilterChange(selectedColumn, new Set());
-  };
-
-  const removeFilter = (columnName: string) => {
-    onFilterChange(columnName, new Set());
-    const newSearchByColumn = { ...searchByColumn };
-    delete newSearchByColumn[columnName];
-    setSearchByColumn(newSearchByColumn);
-  };
-
-  const handleColumnSearchChange = (column: string, value: string) => {
-    setSearchByColumn(prev => ({
-      ...prev,
-      [column]: value
-    }));
-  };
-
-  const currentColumnFilter = selectedColumn ? columnFilters[selectedColumn] : null;
-  
   const getUniqueValuesForColumn = (column: string) => {
     if (!column || !records) return [];
     const values = new Set<string>();
@@ -119,13 +76,38 @@ export function AdvancedFilters({
     });
     return Array.from(values).sort();
   };
-  
+
   const getFilteredValuesForColumn = (column: string) => {
     const values = getUniqueValuesForColumn(column);
     const search = searchByColumn[column] || '';
     if (!search.trim()) return values;
     const searchLower = search.toLowerCase();
     return values.filter(v => v.toLowerCase().includes(searchLower));
+  };
+
+  const handleColumnSearchChange = (column: string, value: string) => {
+    setSearchByColumn(prev => ({
+      ...prev,
+      [column]: value
+    }));
+  };
+
+  const removeFilter = (columnName: string) => {
+    onFilterChange(columnName, new Set());
+    const newSearchByColumn = { ...searchByColumn };
+    delete newSearchByColumn[columnName];
+    setSearchByColumn(newSearchByColumn);
+  };
+
+  const handleToggleValue = (column: string, value: string) => {
+    const currentFilter = columnFilters[column] || new Set();
+    const newFilter = new Set(currentFilter);
+    if (newFilter.has(value)) {
+      newFilter.delete(value);
+    } else {
+      newFilter.add(value);
+    }
+    onFilterChange(column, newFilter);
   };
 
   return (
@@ -147,194 +129,144 @@ export function AdvancedFilters({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[600px]" align="start" dir="rtl">
-            <Tabs defaultValue="single" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="single" data-testid="tab-single-column">
-                  فلترة عمود واحد
-                </TabsTrigger>
-                <TabsTrigger value="multiple" data-testid="tab-multiple-columns">
-                  فلترة أعمدة متعددة
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="single" className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    اختر العمود
-                  </label>
-                  <Select 
-                    value={selectedColumn} 
-                    onValueChange={setSelectedColumn}
+          <PopoverContent className="w-80" align="start" dir="rtl">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm">اختر الأعمدة للفلترة</h4>
+                {activeFiltersCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClearAll}
+                    className="h-7 text-xs"
+                    data-testid="button-clear-all-inline"
                   >
-                    <SelectTrigger data-testid="select-filter-column">
-                      <SelectValue placeholder="اختر عمود للفلترة..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableHeaders.map((header) => (
-                        <SelectItem key={header} value={header}>
-                          {header}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedColumn && (
-                  <>
-                    <div>
-                      <Input
-                        placeholder="بحث في القيم..."
-                        value={searchByColumn[selectedColumn] || ''}
-                        onChange={(e) => handleColumnSearchChange(selectedColumn, e.target.value)}
-                        className="mb-2"
-                        data-testid="input-search-filter-values"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        {currentColumnFilter?.size || 0} محدد من {uniqueValues.length}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleSelectAll}
-                          data-testid="button-select-all-values"
-                        >
-                          تحديد الكل
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleClearColumn}
-                          data-testid="button-clear-column"
-                        >
-                          مسح
-                        </Button>
-                      </div>
-                    </div>
-
-                    <ScrollArea className="h-64 border rounded-md p-2">
-                      <div className="space-y-2">
-                        {filteredValues.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            لا توجد قيم
-                          </p>
-                        ) : (
-                          filteredValues.map((value) => (
-                            <div
-                              key={value}
-                              className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
-                              onClick={() => handleToggleValue(value)}
-                              data-testid={`filter-value-${value}`}
-                            >
-                              <Checkbox
-                                checked={currentColumnFilter?.has(value) || false}
-                                onCheckedChange={() => handleToggleValue(value)}
-                              />
-                              <span className="text-sm flex-1 break-all">
-                                {value}
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </>
+                    مسح الكل
+                  </Button>
                 )}
-              </TabsContent>
-              
-              <TabsContent value="multiple" className="space-y-4">
-                <ScrollArea className="h-[400px] pr-4">
-                  <div className="space-y-4">
-                    {availableHeaders.map((header) => {
+              </div>
+
+              <Input
+                placeholder="بحث في الأعمدة..."
+                value={columnSearch}
+                onChange={(e) => setColumnSearch(e.target.value)}
+                className="h-8"
+                data-testid="input-search-columns"
+              />
+
+              <ScrollArea className="h-96">
+                <div className="space-y-2 pr-2">
+                  {filteredHeaders.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      لا توجد أعمدة
+                    </p>
+                  ) : (
+                    filteredHeaders.map((header) => {
                       const uniqueVals = getUniqueValuesForColumn(header);
                       const filteredVals = getFilteredValuesForColumn(header);
                       const filter = columnFilters[header];
                       const selectedCount = filter?.size || 0;
-                      
+                      const isExpanded = expandedColumns.has(header);
+
                       return (
-                        <div key={header} className="border rounded-lg p-3 bg-muted/20">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-sm">{header}</h4>
-                            <Badge variant="outline" className="text-xs">
-                              {selectedCount} / {uniqueVals.length}
-                            </Badge>
-                          </div>
-                          
-                          <Input
-                            placeholder="بحث..."
-                            value={searchByColumn[header] || ''}
-                            onChange={(e) => handleColumnSearchChange(header, e.target.value)}
-                            className="mb-2 h-8 text-sm"
-                            data-testid={`input-search-${header}`}
-                          />
-                          
-                          <div className="flex gap-2 mb-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => onFilterChange(header, new Set(uniqueVals))}
-                              data-testid={`button-select-all-${header}`}
-                            >
-                              تحديد الكل
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => removeFilter(header)}
-                              data-testid={`button-clear-${header}`}
-                            >
-                              مسح
-                            </Button>
-                          </div>
-                          
-                          <ScrollArea className="h-32 border rounded-md p-2 bg-background">
-                            <div className="space-y-1">
-                              {filteredVals.length === 0 ? (
-                                <p className="text-xs text-muted-foreground text-center py-2">
-                                  لا توجد قيم
-                                </p>
-                              ) : (
-                                filteredVals.slice(0, 50).map((value) => (
-                                  <div
-                                    key={value}
-                                    className="flex items-center gap-2 p-1.5 rounded hover:bg-muted cursor-pointer"
-                                    onClick={() => {
-                                      const currentFilter = columnFilters[header] || new Set();
-                                      const newFilter = new Set(currentFilter);
-                                      if (newFilter.has(value)) {
-                                        newFilter.delete(value);
-                                      } else {
-                                        newFilter.add(value);
-                                      }
-                                      onFilterChange(header, newFilter);
-                                    }}
-                                    data-testid={`filter-${header}-value-${value}`}
-                                  >
-                                    <Checkbox
-                                      checked={filter?.has(value) || false}
-                                      onCheckedChange={() => {}}
-                                    />
-                                    <span className="text-xs flex-1 break-all">
-                                      {value}
-                                    </span>
-                                  </div>
-                                ))
+                        <div key={header} className="border rounded-md bg-muted/20">
+                          <button
+                            onClick={() => toggleColumn(header)}
+                            className="w-full flex items-center justify-between p-2 hover:bg-muted/40 rounded-md transition-colors"
+                            data-testid={`toggle-column-${header}`}
+                          >
+                            <div className="flex items-center gap-2 flex-1 text-right">
+                              <span className="text-sm font-medium truncate">{header}</span>
+                              {selectedCount > 0 && (
+                                <Badge variant="default" className="text-xs h-5">
+                                  {selectedCount}
+                                </Badge>
                               )}
                             </div>
-                          </ScrollArea>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 flex-shrink-0" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                            )}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="p-2 pt-0 space-y-2">
+                              <Input
+                                placeholder="بحث في القيم..."
+                                value={searchByColumn[header] || ''}
+                                onChange={(e) => handleColumnSearchChange(header, e.target.value)}
+                                className="h-8 text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                                data-testid={`input-search-${header}`}
+                              />
+
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-xs flex-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onFilterChange(header, new Set(uniqueVals));
+                                  }}
+                                  data-testid={`button-select-all-${header}`}
+                                >
+                                  الكل
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-xs flex-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeFilter(header);
+                                  }}
+                                  data-testid={`button-clear-${header}`}
+                                >
+                                  مسح
+                                </Button>
+                              </div>
+
+                              <ScrollArea className="h-40 border rounded-md p-2 bg-background">
+                                <div className="space-y-1">
+                                  {filteredVals.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground text-center py-2">
+                                      لا توجد قيم
+                                    </p>
+                                  ) : (
+                                    filteredVals.map((value) => (
+                                      <div
+                                        key={value}
+                                        className="flex items-center gap-2 p-1 rounded hover:bg-muted cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleValue(header, value);
+                                        }}
+                                        data-testid={`filter-${header}-value-${value}`}
+                                      >
+                                        <Checkbox
+                                          checked={filter?.has(value) || false}
+                                          onCheckedChange={() => {}}
+                                          className="pointer-events-none"
+                                        />
+                                        <span className="text-xs flex-1 break-all">
+                                          {value}
+                                        </span>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              </ScrollArea>
+                            </div>
+                          )}
                         </div>
                       );
-                    })}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-            </Tabs>
+                    })
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
           </PopoverContent>
         </Popover>
 
