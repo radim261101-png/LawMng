@@ -50,7 +50,7 @@ export function useSheetRecords() {
       });
 
       const rowData = new Array(headers.length).fill('');
-      
+
       headers.forEach((header, index) => {
         if (header && record[header] !== undefined && record[header] !== null) {
           rowData[index] = record[header];
@@ -59,23 +59,23 @@ export function useSheetRecords() {
 
       // البحث عن الرقم القومي في الـ record
       let nationalId = '';
-      
+
       // طريقة 1: البحث في كل الـ keys في الـ record مباشرة
       const recordKeys = Object.keys(record);
-      
+
       console.log('🔑 كل الـ keys في الـ record:', recordKeys);
-      
+
       const nationalIdKey = recordKeys.find(key => {
         const normalizedKey = key.trim().toLowerCase();
-        const hasRaqam = normalizedKey.includes('رقم');
-        const hasQawmi = normalizedKey.includes('قوم'); // هيلاقي "قومي" و "قومى"
-        const hasNational = normalizedKey.includes('national');
-        const hasId = normalizedKey.includes('id');
-        
+
+        console.log(`🔎 بفحص key: "${key}"`);
+
+        // البحث عن النص الكامل مباشرة (بالياء والألف المقصورة)
         return (
-          (hasRaqam && hasQawmi) ||
-          (hasNational && hasId) ||
-          normalizedKey === 'nationalid'
+          normalizedKey.includes('الرقم القومي') ||
+          normalizedKey.includes('الرقم القومى') ||
+          normalizedKey.includes('nationalid') ||
+          normalizedKey === 'national id'
         );
       });
 
@@ -96,17 +96,19 @@ export function useSheetRecords() {
           const hasQawmi = normalized.includes('قوم');
           const hasNational = normalized.includes('national');
           const hasId = normalized.includes('id');
-          
+
+          // البحث عن النص الكامل مباشرة في الـ headers
           return (
-            (hasRaqam && hasQawmi) ||
+            normalized.includes('الرقم القومي') ||
+            normalized.includes('الرقم القومى') ||
             (hasNational && hasId) ||
             normalized === 'nationalid'
           );
         });
-        
+
         console.log('📋 الـ header اللي اتلقى:', nationalIdHeader);
         console.log('📝 القيمة من الـ header:', nationalIdHeader ? record[nationalIdHeader] : 'مفيش header');
-        
+
         if (nationalIdHeader && record[nationalIdHeader]) {
           nationalId = String(record[nationalIdHeader]).trim();
         }
@@ -118,7 +120,7 @@ export function useSheetRecords() {
       Object.keys(updates).forEach((key) => {
         const oldValue = record[key] || '';
         const newValue = updates[key] || '';
-        
+
         if (oldValue !== newValue) {
           changePromises.push(
             logUpdateToSheet(activeSheet, {
@@ -154,13 +156,13 @@ export function useSheetRecords() {
       );
 
       await updateSheetRow(activeSheet, record.rowIndex, rowData);
-      
+
       await Promise.all(changePromises);
-      
+
       setTimeout(() => {
         fetchRecords();
       }, 1000);
-      
+
       toast({
         title: 'تم التحديث بنجاح',
         description: 'تم حفظ التعديلات على السجل',
